@@ -28,12 +28,14 @@ static int hello_getattr(const char *path, struct stat *stbuf)
     {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-    } else if (strcmp(path, hello_path) == 0)
+    }
+    else if (strcmp(path, hello_path) == 0)
     {
         stbuf->st_mode = S_IFREG | 0444;
         stbuf->st_nlink = 1;
         stbuf->st_size = strlen(hello_str);
-    } else
+    }
+    else
         res = -ENOENT;
 
     return res;
@@ -78,7 +80,8 @@ static int hello_read(const char *path, char *buf, size_t size, off_t offset, st
         if (offset + size > len)
             size = len - offset;
         memcpy(buf, hello_str + offset, size);
-    } else
+    }
+    else
         size = 0;
 
     return size;
