@@ -1,6 +1,3 @@
-(?) Will our files ever grow in size or will they stay the same size that they are when they were created?
-
-
 Directory Entries:
 - These are our directories.
 - They are comprised of a name (dname) and a counter variable (nFiles) which tracks how many

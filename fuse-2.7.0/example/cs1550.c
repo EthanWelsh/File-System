@@ -54,15 +54,43 @@ typedef struct cs1550_disk_block cs1550_disk_block;
  *
  * man -s 2 stat will show the fields of a stat structure
  */
+
+cs1550_directory_entry *dirs;
+
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
+    int dirCount = 0;
+
+    if(dirs == NULL)
+    { // If we have not yet read in the directories...
+
+        FILE * fp;
+        fp = fopen (".directories", "w+");
+
+        printf("Reading in directories...\n");
+
+        if(fp != null)
+        { // Open success
+            fread(&dirCount, 1, sizeof(int), fp);
+            fread(dirs, dirCount, sizeof(cs1550_directory_entry), fp);
+            printf("Read in %d directories\n", dirCount);
+        }
+        else
+        {
+            printf("Error Reading File\n");
+            return -1;
+        }
+    }
+
+
 
     memset(stbuf, 0, sizeof(struct stat));
 
     //is path the root dir?
     if (strcmp(path, "/") == 0)
     {
+
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
     }
