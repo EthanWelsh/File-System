@@ -1,12 +1,3 @@
-/*
-	FUSE: Filesystem in Userspace
-	Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
-
-	This program can be distributed under the terms of the GNU GPL.
-	See the file COPYING.
-
-*/
-
 #define    FUSE_USE_VERSION 26
 
 #include <fuse.h>
@@ -34,9 +25,8 @@
 
 struct cs1550_directory_entry
 {
-    char dname[MAX_FILENAME + 1];    //the directory name (plus space for a nul)
-    int nFiles;            //How many files are in this directory.
-    //Needs to be less than MAX_FILES_IN_DIR
+    char dname[MAX_FILENAME + 1]; //the directory name (plus space for a null)
+    int nFiles; //How many files are in this directory (needs to be less than MAX_FILES_IN_DIR)
 
     struct cs1550_file_directory
     {
@@ -114,7 +104,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     (void) offset;
     (void) fi;
 
-    //This line assumes we have no subdirectories, need to change
+    //This line assumes we have no subdirectories, need to change TODO
     if (strcmp(path, "/") != 0)
         return -ENOENT;
 
