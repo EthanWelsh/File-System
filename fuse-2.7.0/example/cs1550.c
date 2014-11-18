@@ -62,6 +62,9 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     int res = 0;
     int dirCount = 0;
 
+    printf("You called GETATTR\n");
+    //printf("PATH: %s\n", path);
+
     if(dirs == NULL)
     { // If we have not yet read in the directories...
 
@@ -70,7 +73,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 
         printf("Reading in directories...\n");
 
-        if(fp != null)
+        if(fp != NULL)
         { // Open success
             fread(&dirCount, 1, sizeof(int), fp);
             fread(dirs, dirCount, sizeof(cs1550_directory_entry), fp);
@@ -82,8 +85,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             return -1;
         }
     }
-
-
 
     memset(stbuf, 0, sizeof(struct stat));
 
