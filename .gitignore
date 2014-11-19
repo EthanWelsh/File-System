@@ -1,3 +1,7 @@
+#Project Files
+*.xml
+*.xcodeproj
+
 # Object files
 *.o
 *.ko
