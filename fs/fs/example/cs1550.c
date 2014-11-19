@@ -173,11 +173,42 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
  */
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
-    (void) path;
-    (void) mode;
+
+    FILE * fp;
+    fp = fopen (".directories", "w+");
+
+    int dirCount = 0;
+
+    if(fp != NULL)
+    {
+        // Read the first thing in the file, the number of dirs in the file.
+        fread(&dirCount, 1, sizeof(int), fp);
+
+        // Allocate space for all directories, plus an additional one which will be the one we add
+        dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry) * (dirCount+1));
+
+        // Read all the directories from our file into our array of dir structures.
+        fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
+
+        const char *slashlessPath = &path[1];
+
+        cs1550_directory_entry *newDir = &dirs[dirCount];
+
+        newDir->dname = slashlessPath;
+        newDir->nFiles = 0;
+
+        dirCount++;
+        printf("Changing dir count to %d from %d", dirCount, dirCount - 1);
 
 
-
+        fseek (fp, 0, SEEK_SET);
+        fwrite(&dirCount, 1, sizeof(int), fp);
+        fwrite(dirs, 1, sizeof(cs1550_directory_entry) * dirCount, fp);
+    }
+    else
+    {
+        printf("Error Reading File\n");
+    }
 
     return 0;
 }
