@@ -1,6 +1,7 @@
 #Project Files
 *.xml
 *.xcodeproj
+*.idea
 
 # Object files
 *.o

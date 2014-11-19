@@ -87,6 +87,7 @@ static void getDir(const char *path, cs1550_directory_entry *d)
         {
             if(strcmp(slashlessPath,dirs[i].dname) == 0)
             { // If you've found a directory with a name that matches the one passed in.
+                printf("We found the DIR\n");
                 d = &dirs[i];
                 return;
             }
@@ -174,6 +175,9 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 {
     (void) path;
     (void) mode;
+
+
+
 
     return 0;
 }
