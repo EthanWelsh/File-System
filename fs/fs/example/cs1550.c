@@ -60,8 +60,14 @@ typedef struct cs1550_disk_block cs1550_disk_block;
 cs1550_directory_entry *dirs;
 
 
-
-static void getDir(const char *path, cs1550_directory_entry *d)
+/* getDir
+ *
+ * returns:
+ *  + true when a directory has been success located.
+ *  + false if a directory could not be located.
+ *
+ */
+static bool getDir(const char *path, cs1550_directory_entry *d)
 {
     FILE * fp;
     fp = fopen (".directories", "r");
@@ -79,17 +85,17 @@ static void getDir(const char *path, cs1550_directory_entry *d)
         // Read all the directories from our file into our array of dir structures.
         fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
 
-        const char *slashlessPath = &path[1];
+
 
         int i;
 
         for(i = 0; i < dirCount; i++)
         {
-            if(strcmp(slashlessPath,dirs[i].dname) == 0)
+            if(strcmp(path,dirs[i].dname) == 0)
             { // If you've found a directory with a name that matches the one passed in.
                 printf("We found the DIR\n");
                 d = &dirs[i];
-                return;
+                return true;
             }
         }
     }
@@ -98,7 +104,7 @@ static void getDir(const char *path, cs1550_directory_entry *d)
         printf("Error Reading File\n");
     }
 
-    d = NULL;
+    return false;
 
 }
 
@@ -115,6 +121,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     //is path the root dir?
     if (strcmp(path, "/") == 0)
     {
+        printf("FOUND ROOT")
         //Check if name is subdirectory
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
@@ -123,10 +130,43 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     else
     {
 
-        stbuf->st_mode = S_IFREG | 0666;
-        stbuf->st_nlink = 1; //file links
-        stbuf->st_size = 0; //file size - make sure you replace with real size!
-        res = 0; // no error
+        char directory[MAX_FILENAME];
+        char filename[MAX_FILENAME];
+        char extension[MAX_EXTENSION];
+
+        sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
+
+        printf("Directory: %s\n", directory);
+        printf("File Name: %s\n", filename);
+        printf("Extension: %s\n", extension);
+
+
+        if(directory)
+        {
+            printf("GETTING DIRECTORY\n");
+            cs1550_directory_entry targetDir;
+            if(getDir(directory, targetDir))
+            { // If the file could be found...
+                printf("Found Directory. Name is %s\n", targetDir.dname);
+                stbuf->st_mode = S_IFREG | 0666;
+                stbuf->st_nlink = 1; //file links
+                stbuf->st_size = 0; //file size - make sure you replace with real size!
+                res = 0; // no error
+            }
+            else
+            { // If the file could NOT be found...
+                return -ENOENT;
+            }
+        }
+        else if(filename)
+        { // TODO handle files
+            printf("FILE?!?!?!?\n");
+            return -ENOENT;
+        }
+
+
+
+
 
 
         //TODO Else return that path doesn't exist
@@ -192,14 +232,16 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 
         const char *slashlessPath = &path[1];
 
+
+
+
         cs1550_directory_entry *newDir = &dirs[dirCount];
 
-        newDir->dname = slashlessPath;
+        strcpy(newDir->dname, slashlessPath);
         newDir->nFiles = 0;
 
         dirCount++;
         printf("Changing dir count to %d from %d", dirCount, dirCount - 1);
-
 
         fseek (fp, 0, SEEK_SET);
         fwrite(&dirCount, 1, sizeof(int), fp);
