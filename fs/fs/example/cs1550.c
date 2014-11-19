@@ -61,20 +61,6 @@ cs1550_directory_entry *dirs;
 
 
 
-static void stripLeadingSlash(const char *path, char *newpath)
-{
-
-    newpath = (char *) malloc(strlen(path));
-    newpath[strlen(path)-1] = '\0';
-
-    int i;
-
-    for(i = 1; i < strlen(path) - 1; i++)
-    {
-        newpath[i-1] = path[i];
-    }
-}
-
 static void getDir(const char *path, cs1550_directory_entry *d)
 {
     FILE * fp;
@@ -93,8 +79,7 @@ static void getDir(const char *path, cs1550_directory_entry *d)
         // Read all the directories from our file into our array of dir structures.
         fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
 
-        const char *slashlessPath;
-        stripLeadingSlash(path, slashlessPath);
+        const char *slashlessPath = &path[1];
 
         int i;
 
