@@ -1,4 +1,6 @@
-#define    FUSE_USE_VERSION 26
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+#define FUSE_USE_VERSION 26
 
 #include <fuse.h>
 #include <stdio.h>
@@ -55,7 +57,59 @@ typedef struct cs1550_disk_block cs1550_disk_block;
  * man -s 2 stat will show the fields of a stat structure
  */
 
-cs1550_directory_entry *dirs;
+void *dirs;
+
+
+
+static const char * stripLeadingSlash(const char *path)
+{
+    char newpath[strlen(path)];
+    newpath[strlen(path)-1] = '\0';
+
+    for(int i = 1; i < strlen(path) - 1; i++)
+    {
+        newpath[i-1] = path[i];
+    }
+
+    return newpath;
+
+}
+
+static cs1550_directory_entry getDir(const char *path)
+{
+    FILE * fp;
+    fp = fopen (".directories", "r");
+
+    int dirCount = 0;
+
+    if(fp != NULL)
+    {
+        // Read the first thing in the file, the number of dirs in the file.
+        fread(&dirCount, 1, sizeof(int), fp);
+
+        // Allocate space for all directories, plus an additional one which will be the one we add
+        dirs = malloc(sizeof(cs1550_directory_entry) * dirCount);
+
+        // Read all the directories from our file into our array of dir structures.
+        fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
+
+        const char *slashlessPath = stripLeadingSlash(path);
+
+        for(int i = 0; i < dirCount; i++)
+        {
+            if(strcmp(slashlessPath,dirs[i].dname) == 0)
+            { // If you've found a directory with a name that matches the one passed in.
+                return dirs[i];
+            }
+        }
+        return -1;
+    }
+    else
+    {
+        printf("Error Reading File\n");
+        return -1;
+    }
+}
 
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
@@ -65,58 +119,27 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     printf("You called GETATTR\n");
     //printf("PATH: %s\n", path);
 
-    if(dirs == NULL)
-    { // If we have not yet read in the directories...
-
-        FILE * fp;
-        fp = fopen (".directories", "w+");
-
-        printf("Reading in directories...\n");
-
-        if(fp != NULL)
-        { // Open success
-            fread(&dirCount, 1, sizeof(int), fp);
-            fread(dirs, dirCount, sizeof(cs1550_directory_entry), fp);
-            printf("Read in %d directories\n", dirCount);
-        }
-        else
-        {
-            printf("Error Reading File\n");
-            return -1;
-        }
-    }
-
     memset(stbuf, 0, sizeof(struct stat));
 
     //is path the root dir?
     if (strcmp(path, "/") == 0)
     {
-
+        //Check if name is subdirectory
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
+        res = 0;
     }
     else
     {
 
-        //Check if name is subdirectory
-        /*
-            //Might want to return a structure with these fields
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
-            res = 0; //no error
-        */
+        stbuf->st_mode = S_IFREG | 0666;
+        stbuf->st_nlink = 1; //file links
+        stbuf->st_size = 0; //file size - make sure you replace with real size!
+        res = 0; // no error
 
-        //Check if name is a regular file
-        /*
-            //regular file, probably want to be read and write
-            stbuf->st_mode = S_IFREG | 0666;
-            stbuf->st_nlink = 1; //file links
-            stbuf->st_size = 0; //file size - make sure you replace with real size!
-            res = 0; // no error
-        */
 
-        //Else return that path doesn't exist
-        res = -ENOENT;
+        //TODO Else return that path doesn't exist
+        // res = -ENOENT;
     }
     return res;
 }
@@ -132,6 +155,9 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     //satisfy the compiler
     (void) offset;
     (void) fi;
+
+
+
 
     //This line assumes we have no subdirectories, need to change TODO
     if (strcmp(path, "/") != 0)
@@ -158,6 +184,43 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 {
     (void) path;
     (void) mode;
+
+
+    if(dirs == NULL)
+    { // If we have not yet read in the directories...
+
+        FILE * fp;
+        fp = fopen (".directories", "w+");
+
+        printf("Reading in directories...\n");
+
+        if(fp != NULL)
+        {
+            // Read the first thing in the file, the number of dirs in the file.
+            fread(&dirCount, 1, sizeof(int), fp);
+
+            // Allocate space for all directories, plus an additional one which will be the one we add
+            dirs = malloc(sizeof(cs1550_directory_entry) * (dirCount + 1));
+
+            // Read all the directories from our file into our array of dir structures.
+            fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
+
+            // new directory that we'll be adding
+            cs1550_directory_entry *newDir = &dirs[dirCount];
+
+            // Set the directory to have the correct name
+            newDir->dname = path;
+
+            // Start the directory with a single file
+            newDir->nFiles = 0;
+        }
+        else
+        {
+            printf("Error Reading File\n");
+            return -1;
+        }
+    }
+
 
     return 0;
 }
@@ -225,6 +288,8 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
     (void) offset;
     (void) fi;
     (void) path;
+
+
 
     //check to make sure path exists
     //check that size is > 0
@@ -325,3 +390,5 @@ int main(int argc, char *argv[])
 {
     return fuse_main(argc, argv, &hello_oper, NULL);
 }
+
+#pragma clang diagnostic pop
