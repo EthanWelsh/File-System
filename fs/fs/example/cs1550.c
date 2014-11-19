@@ -57,25 +57,25 @@ typedef struct cs1550_disk_block cs1550_disk_block;
  * man -s 2 stat will show the fields of a stat structure
  */
 
-void *dirs;
+cs1550_directory_entry *dirs;
 
 
 
-static const char * stripLeadingSlash(const char *path)
+static void stripLeadingSlash(const char *path, char *newpath)
 {
-    char newpath[strlen(path)];
+
+    newpath = (char *) malloc(strlen(path));
     newpath[strlen(path)-1] = '\0';
 
-    for(int i = 1; i < strlen(path) - 1; i++)
+    int i;
+
+    for(i = 1; i < strlen(path) - 1; i++)
     {
         newpath[i-1] = path[i];
     }
-
-    return newpath;
-
 }
 
-static cs1550_directory_entry getDir(const char *path)
+static void getDir(const char *path, cs1550_directory_entry *d)
 {
     FILE * fp;
     fp = fopen (".directories", "r");
@@ -88,27 +88,32 @@ static cs1550_directory_entry getDir(const char *path)
         fread(&dirCount, 1, sizeof(int), fp);
 
         // Allocate space for all directories, plus an additional one which will be the one we add
-        dirs = malloc(sizeof(cs1550_directory_entry) * dirCount);
+        dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry) * dirCount);
 
         // Read all the directories from our file into our array of dir structures.
         fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
 
-        const char *slashlessPath = stripLeadingSlash(path);
+        const char *slashlessPath;
+        stripLeadingSlash(path, slashlessPath);
 
-        for(int i = 0; i < dirCount; i++)
+        int i;
+
+        for(i = 0; i < dirCount; i++)
         {
             if(strcmp(slashlessPath,dirs[i].dname) == 0)
             { // If you've found a directory with a name that matches the one passed in.
-                return dirs[i];
+                d = &dirs[i];
+                return;
             }
         }
-        return -1;
     }
     else
     {
         printf("Error Reading File\n");
-        return -1;
     }
+
+    d = NULL;
+
 }
 
 static int cs1550_getattr(const char *path, struct stat *stbuf)
@@ -184,43 +189,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 {
     (void) path;
     (void) mode;
-
-
-    if(dirs == NULL)
-    { // If we have not yet read in the directories...
-
-        FILE * fp;
-        fp = fopen (".directories", "w+");
-
-        printf("Reading in directories...\n");
-
-        if(fp != NULL)
-        {
-            // Read the first thing in the file, the number of dirs in the file.
-            fread(&dirCount, 1, sizeof(int), fp);
-
-            // Allocate space for all directories, plus an additional one which will be the one we add
-            dirs = malloc(sizeof(cs1550_directory_entry) * (dirCount + 1));
-
-            // Read all the directories from our file into our array of dir structures.
-            fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
-
-            // new directory that we'll be adding
-            cs1550_directory_entry *newDir = &dirs[dirCount];
-
-            // Set the directory to have the correct name
-            newDir->dname = path;
-
-            // Start the directory with a single file
-            newDir->nFiles = 0;
-        }
-        else
-        {
-            printf("Error Reading File\n");
-            return -1;
-        }
-    }
-
 
     return 0;
 }
