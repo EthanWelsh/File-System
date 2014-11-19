@@ -67,7 +67,7 @@ cs1550_directory_entry *dirs;
  *  + false if a directory could not be located.
  *
  */
-static bool getDir(const char *path, cs1550_directory_entry *d)
+static char getDir(const char *path, cs1550_directory_entry *d)
 {
     FILE * fp;
     fp = fopen (".directories", "r");
@@ -95,7 +95,7 @@ static bool getDir(const char *path, cs1550_directory_entry *d)
             { // If you've found a directory with a name that matches the one passed in.
                 printf("We found the DIR\n");
                 d = &dirs[i];
-                return true;
+                return 1;
             }
         }
     }
@@ -104,14 +104,13 @@ static bool getDir(const char *path, cs1550_directory_entry *d)
         printf("Error Reading File\n");
     }
 
-    return false;
+    return 0;
 
 }
 
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
-    int dirCount = 0;
 
     printf("You called GETATTR\n");
     //printf("PATH: %s\n", path);
@@ -121,7 +120,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     //is path the root dir?
     if (strcmp(path, "/") == 0)
     {
-        printf("FOUND ROOT")
+        printf("FOUND ROOT\n");
         //Check if name is subdirectory
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
@@ -141,11 +140,11 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
         printf("Extension: %s\n", extension);
 
 
-        if(directory)
+        if(strcmp(directory, ""))
         {
             printf("GETTING DIRECTORY\n");
             cs1550_directory_entry targetDir;
-            if(getDir(directory, targetDir))
+            if(getDir(directory, &targetDir))
             { // If the file could be found...
                 printf("Found Directory. Name is %s\n", targetDir.dname);
                 stbuf->st_mode = S_IFREG | 0666;
@@ -158,7 +157,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 return -ENOENT;
             }
         }
-        else if(filename)
+        else if(strcmp(filename, ""))
         { // TODO handle files
             printf("FILE?!?!?!?\n");
             return -ENOENT;
@@ -214,6 +213,8 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
 
+    (void) mode;
+
     FILE * fp;
     fp = fopen (".directories", "w+");
 
@@ -241,7 +242,7 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         newDir->nFiles = 0;
 
         dirCount++;
-        printf("Changing dir count to %d from %d", dirCount, dirCount - 1);
+        printf("Changing dir count to %d from %d\n", dirCount, dirCount - 1);
 
         fseek (fp, 0, SEEK_SET);
         fwrite(&dirCount, 1, sizeof(int), fp);
