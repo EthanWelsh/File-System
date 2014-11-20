@@ -149,9 +149,9 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             if(getDir(directory, &targetDir))
             { // If the file could be found...
                 printf("Found Directory. Name is %s\n", directory);
-                stbuf->st_mode = S_IFREG | 0666;
-                stbuf->st_nlink = 1; //file links
-                stbuf->st_size = 0; //file size - make sure you replace with real size!
+                stbuf->st_mode = S_IFDIR | 0755;
+                stbuf->st_nlink = 2;
+
                 res = 0; // no error
             }
             else
@@ -187,8 +187,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     //satisfy the compiler
     (void) offset;
     (void) fi;
-
-
 
 
     //This line assumes we have no subdirectories, need to change TODO
@@ -232,7 +230,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         // Read the first thing in the file, the number of dirs in the file.
         fread(&dirCount, 1, sizeof(int), fp);
 
-
         // Allocate space for all directories, plus an additional one which will be the one we add
         dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry) * (dirCount+1));
 
@@ -250,17 +247,12 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         printf("Changing dir count from %d to %d\n", dirCount - 1, dirCount);
 
 
-
         fp = fopen(".directories", "w");
 
         fseek(fp, SEEK_SET, 0);
 
         fwrite(&dirCount, 1, sizeof(int), fp);
         fwrite(dirs, 1, sizeof(cs1550_directory_entry) * dirCount, fp);
-
-        fflush(fp);
-        fclose(fp);
-
     }
     else
     {
@@ -284,11 +276,9 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 
         printf("WROTE FILE\n");
 
-        fflush(fp);
-        fclose(fp);
-
     }
 
+    fclose(fp);
 
     printf("==========MKDIR END==========\n");
     return 0;
