@@ -63,8 +63,8 @@ cs1550_directory_entry *dirs;
 /* getDir
  *
  * returns:
- *  + true when a directory has been success located.
- *  + false if a directory could not be located.
+ *  + 1 when a directory has been success located.
+ *  + 0 if a directory could not be located.
  *
  */
 static char getDir(const char *path, cs1550_directory_entry *d)
@@ -104,6 +104,7 @@ static char getDir(const char *path, cs1550_directory_entry *d)
         printf("Error Reading File\n");
     }
 
+
     return 0;
 
 }
@@ -112,7 +113,8 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
 
-    printf("You called GETATTR\n");
+    printf("==========GETATTR START==========\n");
+    printf("%s\n", path);
     //printf("PATH: %s\n", path);
 
     memset(stbuf, 0, sizeof(struct stat));
@@ -129,9 +131,9 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     else
     {
 
-        char directory[MAX_FILENAME];
-        char filename[MAX_FILENAME];
-        char extension[MAX_EXTENSION];
+        char directory[MAX_FILENAME + 1] = {0};
+        char filename[MAX_FILENAME + 1] = {0};
+        char extension[MAX_EXTENSION] = {0};
 
         sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
@@ -146,7 +148,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             cs1550_directory_entry targetDir;
             if(getDir(directory, &targetDir))
             { // If the file could be found...
-                printf("Found Directory. Name is %s\n", targetDir.dname);
+                printf("Found Directory. Name is %s\n", directory);
                 stbuf->st_mode = S_IFREG | 0666;
                 stbuf->st_nlink = 1; //file links
                 stbuf->st_size = 0; //file size - make sure you replace with real size!
@@ -154,23 +156,23 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             }
             else
             { // If the file could NOT be found...
+                printf("%s could not be found \n", directory);
+                printf("==========GETATTR END==========\n");
                 return -ENOENT;
             }
         }
         else if(strcmp(filename, ""))
         { // TODO handle files
             printf("FILE?!?!?!?\n");
+            printf("==========GETATTR END==========\n");
             return -ENOENT;
         }
-
-
-
-
 
 
         //TODO Else return that path doesn't exist
         // res = -ENOENT;
     }
+    printf("==========GETATTR END==========\n");
     return res;
 }
 
@@ -212,18 +214,26 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
  */
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
+    printf("==========MKDIR START==========\n");
+    printf("PATH: %s\n", path);
 
     (void) mode;
 
     FILE * fp;
-    fp = fopen (".directories", "w+");
+    fp = fopen (".directories", "r");
+
+    printf("fp is %d\n", fp);
 
     int dirCount = 0;
 
     if(fp != NULL)
     {
+
+        printf(".directories file opened sucessfully\n");
+
         // Read the first thing in the file, the number of dirs in the file.
         fread(&dirCount, 1, sizeof(int), fp);
+
 
         // Allocate space for all directories, plus an additional one which will be the one we add
         dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry) * (dirCount+1));
@@ -233,9 +243,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 
         const char *slashlessPath = &path[1];
 
-
-
-
         cs1550_directory_entry *newDir = &dirs[dirCount];
 
         strcpy(newDir->dname, slashlessPath);
@@ -244,15 +251,45 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         dirCount++;
         printf("Changing dir count to %d from %d\n", dirCount, dirCount - 1);
 
-        fseek (fp, 0, SEEK_SET);
-        fwrite(&dirCount, 1, sizeof(int), fp);
-        fwrite(dirs, 1, sizeof(cs1550_directory_entry) * dirCount, fp);
+
+        FILE * wfp;
+        wfp = fopen(".directories", "w");
+
+        fwrite(&dirCount, 1, sizeof(int), wfp);
+        fwrite(dirs, 1, sizeof(cs1550_directory_entry) * dirCount, wfp);
+
+        fclose(fp);
+
     }
     else
     {
-        printf("Error Reading File\n");
+        printf(".directories file NOT opened sucessfully\n");
+        printf("Creating new DIR\n");
+
+
+        fp = fopen(".directories", "w");
+
+        int one = 1;
+
+        dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry));
+
+        const char *slashlessPath = &path[1];
+
+        strcpy(dirs[0].dname, slashlessPath);
+        dirs[0].nFiles = 0;
+
+        fwrite(&one, 1, sizeof(int), fp);
+        fwrite(dirs, 1, sizeof(cs1550_directory_entry), fp);
+
+        printf("WROTE FILE\n");
+
+        fflush(fp);
+        fclose(fp);
+
     }
 
+
+    printf("==========MKDIR END==========\n");
     return 0;
 }
 
