@@ -222,8 +222,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     FILE * fp;
     fp = fopen (".directories", "r");
 
-    printf("fp is %d\n", fp);
-
     int dirCount = 0;
 
     if(fp != NULL)
@@ -249,15 +247,18 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         newDir->nFiles = 0;
 
         dirCount++;
-        printf("Changing dir count to %d from %d\n", dirCount, dirCount - 1);
+        printf("Changing dir count from %d to %d\n", dirCount - 1, dirCount);
 
 
-        FILE * wfp;
-        wfp = fopen(".directories", "w");
 
-        fwrite(&dirCount, 1, sizeof(int), wfp);
-        fwrite(dirs, 1, sizeof(cs1550_directory_entry) * dirCount, wfp);
+        fp = fopen(".directories", "w");
 
+        fseek(fp, SEEK_SET, 0);
+
+        fwrite(&dirCount, 1, sizeof(int), fp);
+        fwrite(dirs, 1, sizeof(cs1550_directory_entry) * dirCount, fp);
+
+        fflush(fp);
         fclose(fp);
 
     }
