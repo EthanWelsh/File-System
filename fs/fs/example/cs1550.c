@@ -58,6 +58,7 @@ typedef struct cs1550_disk_block cs1550_disk_block;
  */
 
 cs1550_directory_entry *dirs;
+int dirCount;
 
 
 /* getDir
@@ -72,7 +73,7 @@ static char getDir(const char *path, cs1550_directory_entry *d)
     FILE * fp;
     fp = fopen (".directories", "r");
 
-    int dirCount = 0;
+
 
     if(fp != NULL)
     {
@@ -188,15 +189,45 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     (void) offset;
     (void) fi;
 
+    printf("==========READDIR START==========\n");
+
+
+    char directory[MAX_FILENAME + 1] = {0};
+
+    sscanf(path, "/%[^/]/%[^.].%s", directory);
+
+    printf("Reading from Directory: %s\n", directory);
+
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+
+    printf("PATH: %s\n", path);
+    printf("R: %d\n", strcmp(path, "/"));
+    printf("R: %d\n", strcmp(path, "fdsfdfd/"));
 
     //This line assumes we have no subdirectories, need to change TODO
     if (strcmp(path, "/") != 0)
+    {
         return -ENOENT;
+    }
+
+    printf("DIRCOUNT: %d\n", dirCount);
+
+    int i;
+    for(i = 0; i < dirCount; i++)
+    {
+        printf("FILLING IN %s\n", dirs[i].dname);
+        filler(buf, dirs[i].dname, NULL, 0);
+    }
+
 
     //the filler function allows us to add entries to the listing
     //read the fuse.h file for a description (in the ../include dir)
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
+
+
+
+
+    printf("==========READDIR END==========\n");
 
     /*
     //add the user stuff (subdirs or files)
