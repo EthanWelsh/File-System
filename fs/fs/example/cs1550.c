@@ -108,9 +108,9 @@ int markTaken(int blockNum)
 
     orMask = orMask >> indexIntoByte;
 
-    fseek(fp, byteToSeekTo, SEEK_SET);
-
     char byteFromFile;
+
+    fseek(fp, byteToSeekTo, SEEK_SET);
     fread(&byteFromFile, 1, 1, fp);
 
     printf("OLD: ");
@@ -121,7 +121,10 @@ int markTaken(int blockNum)
     printf("NEW: ");
     printByte(byteFromFile);
 
+    fseek(fp, byteToSeekTo, SEEK_SET);
     fwrite(&byteFromFile, 1, 1, fp);
+
+    fclose(fp);
 
     return 0;
 }
@@ -139,10 +142,11 @@ int markFree(int blockNum)
 
     blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
 
-    fseek(fp, byteToSeekTo, SEEK_SET);  // SEG FAULT
-
     char byteFromFile;
+
+    fseek(fp, byteToSeekTo, SEEK_SET);
     fread(&byteFromFile, 1, 1, fp);
+
 
     unsigned char orMask = 0x80;
 
@@ -158,7 +162,10 @@ int markFree(int blockNum)
     printf("NEW: ");
     printByte(byteFromFile);
 
+    fseek(fp, byteToSeekTo, SEEK_SET);
     fwrite(&byteFromFile, 1, 1, fp);
+
+    fclose(fp);
 
     return 0;
 }
@@ -175,11 +182,12 @@ int blockStatus(int blockNum)
 
     blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
 
-    fseek(fp, byteToSeekTo, SEEK_SET);
-
     char byteFromFile;
 
+    fseek(fp, byteToSeekTo, SEEK_SET);
     fread(&byteFromFile, 1, 1, fp);
+
+    fclose(fp);
 
     int bit = getBitFromByte(byteFromFile, indexIntoByte);
 
@@ -249,7 +257,6 @@ int nextFreeRunFit(int sizeOfTargetRun)
 {
     return 0;
 }
-
 
 
 /* * * * * * * * * * * * * * *
