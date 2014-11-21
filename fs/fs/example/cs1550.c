@@ -291,10 +291,16 @@ int moveFileToMemory(void * data, int size)
 
 
 // Marks a given region in memory as free
-int removeFileFromMemory(int startBlockNum, int blockCount)
+void removeFileFromMemory(int startBlockNum, int blockCount)
 {
-    return 0;
+    int i;
+
+    for(i = startBlockNum; i < startBlockNum + blockCount; i++)
+    {
+        markFree(i);
+    }
 }
+
 
 
 
