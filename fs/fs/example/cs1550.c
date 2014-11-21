@@ -73,6 +73,14 @@ int dirCount;
 
 
 
+/* * * * * * * * * * * * * * *
+
+        HELPER FUNCTIONS
+
+ * * * * * * * * * * * * * * */
+
+
+
 // Prints the binary representation of a byte
 void printByte(char byte)
 {
@@ -225,8 +233,6 @@ unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to r
 // Given a block will return how many consecutive free blocks can be found after this block.
 int countFreeRun(int blockNum)
 {
-
-
     if(blockStatus(blockNum) == 1) return -1;
     if(blockNum <= SIZE_OF_BITMAP) return -1; // Don't allow allocation over our bitmap.
 
@@ -320,6 +326,44 @@ void removeFileFromMemory(int startBlockNum, int blockCount)
      FILESYSTEM FUNCTIONS
 
  * * * * * * * * * * * * * * */
+
+
+
+static char getDir(const char *path, cs1550_directory_entry *d)
+{
+    FILE * fp;
+    fp = fopen (".directories", "r");
+
+    if(fp != NULL)
+    {
+        // Read the first thing in the file, the number of dirs in the file.
+        fread(&dirCount, 1, sizeof(int), fp);
+
+        // Allocate space for all directories, plus an additional one which will be the one we add
+        dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry) * dirCount);
+
+        // Read all the directories from our file into our array of dir structures.
+        fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
+
+        int i;
+        for(i = 0; i < dirCount; i++)
+        {
+            if(strcmp(path,dirs[i].dname) == 0)
+            { // If you've found a directory with a name that matches the one passed in.
+                printf("We found the DIR\n");
+                d = &dirs[i];
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        printf("Error Reading File\n");
+    }
+    return 0;
+}
+
+
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
@@ -370,7 +414,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 return -ENOENT;
             }
         }
-        else if(strcmp(filename, ""))
+        else if(strcmp(filename, "")) // If the filename isn't empty
         { // TODO handle files
             printf("FILE?!?!?!?\n");
             printf("==========GETATTR END==========\n");
@@ -542,6 +586,8 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
     (void) offset;
     (void) fi;
     (void) path;
+
+
 
     //check to make sure path exists
     //check that size is > 0
