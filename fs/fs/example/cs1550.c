@@ -95,7 +95,6 @@ void printByte(char byte)
 // Given a block, mark said block as taken
 int markTaken(int blockNum)
 {
-    printf("===========TAKEN=========\n");
     FILE *fp;
     fp = fopen("disk", "r+");
 
@@ -113,13 +112,7 @@ int markTaken(int blockNum)
     fseek(fp, byteToSeekTo, SEEK_SET);
     fread(&byteFromFile, 1, 1, fp);
 
-    printf("OLD: ");
-    printByte(byteFromFile);
-
     byteFromFile = byteFromFile | orMask;
-
-    printf("NEW: ");
-    printByte(byteFromFile);
 
     fseek(fp, byteToSeekTo, SEEK_SET);
     fwrite(&byteFromFile, 1, 1, fp);
@@ -133,7 +126,6 @@ int markTaken(int blockNum)
 // Given a block, marks said block as free
 int markFree(int blockNum)
 {
-    printf("===========FREE=========\n");
     FILE *fp;
     fp = fopen("disk", "r+");
 
@@ -146,21 +138,13 @@ int markFree(int blockNum)
 
     fseek(fp, byteToSeekTo, SEEK_SET);
     fread(&byteFromFile, 1, 1, fp);
-
-
     unsigned char orMask = 0x80;
 
     orMask = orMask >> indexIntoByte;
 
     orMask = ~orMask;
 
-    printf("OLD: ");
-    printByte(byteFromFile);
-
     byteFromFile = byteFromFile&orMask;
-
-    printf("NEW: ");
-    printByte(byteFromFile);
 
     fseek(fp, byteToSeekTo, SEEK_SET);
     fwrite(&byteFromFile, 1, 1, fp);
@@ -175,21 +159,22 @@ int markFree(int blockNum)
 int blockStatus(int blockNum)
 {
     FILE *fp;
-    fopen("disk", "r+");
+    fp = fopen("disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
 
     blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
 
+
     char byteFromFile;
 
     fseek(fp, byteToSeekTo, SEEK_SET);
     fread(&byteFromFile, 1, 1, fp);
 
-    fclose(fp);
-
     int bit = getBitFromByte(byteFromFile, indexIntoByte);
+
+    fclose(fp);
 
     return bit;
 }
@@ -204,7 +189,7 @@ void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
 
     for(i = 0; i < blockNum; i++)
     {
-        if(i == 8)
+        if(offset == 7)
         {
             byte++;
             offset = 0;
@@ -220,7 +205,6 @@ void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
 // Return a specific bit from a given byte.
 unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to right
 {
-
     byte = byte << (indexInByte);
     unsigned char mask = 0x80;
 
@@ -230,6 +214,29 @@ unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to r
     else return 0;
 }
 
+
+// Given a block will return how many consecutive free blocks can be found after this block.
+int countFreeRun(int blockNum)
+{
+    int i;
+
+    int freeBlocksSoFar = 0;
+
+    for(i = blockNum; i < 2048; i++)
+    {
+        if(blockStatus(i) == 0) freeBlocksSoFar++;
+        else return freeBlocksSoFar;
+    }
+
+    return freeBlocksSoFar;
+}
+
+
+// Detects the next sequence of blocks that a file of the given size can fit in, then returns a pointer to that block.
+int nextFreeRunFit(int sizeOfTargetRun)
+{
+    return 0;
+}
 
 // Given a file, will move said file into memory and mark the bitmap appropriately
 int moveFileToMemory(int startBlockNum, int blockCount, int size, void * data)
@@ -243,21 +250,6 @@ int removeFileFromMemory(int startBlockNum, int blockCount)
 {
     return 0;
 }
-
-
-// Given a block will return how many consecutive free blocks can be found after this block.
-int countFreeRun(int blockNum)
-{
-    return 0;
-}
-
-
-// Detects the next sequence of blocks that a file of the given size can fit in, then returns a pointer to that block.
-int nextFreeRunFit(int sizeOfTargetRun)
-{
-    return 0;
-}
-
 
 /* * * * * * * * * * * * * * *
 
