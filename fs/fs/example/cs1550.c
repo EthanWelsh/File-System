@@ -71,6 +71,8 @@ typedef struct cs1550_disk_block cs1550_disk_block;
 cs1550_directory_entry *dirs;
 int dirCount;
 
+
+
 /* * * * * * * * * * * * * * *
 
         HELPER FUNCTIONS
@@ -103,7 +105,7 @@ int markTaken(int blockNum)
 
     blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
 
-    int orMask = 0x80;
+    char orMask = 0x80;
 
     orMask = orMask >> indexIntoByte;
 
@@ -166,7 +168,6 @@ int blockStatus(int blockNum)
 
     blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
 
-
     char byteFromFile;
 
     fseek(fp, byteToSeekTo, SEEK_SET);
@@ -222,6 +223,9 @@ int countFreeRun(int blockNum)
 
     int freeBlocksSoFar = 0;
 
+    if(blockStatus(blockNum) == 1) return -1;
+
+
     for(i = blockNum; i < 2048; i++)
     {
         if(blockStatus(i) == 0) freeBlocksSoFar++;
@@ -235,21 +239,53 @@ int countFreeRun(int blockNum)
 // Detects the next sequence of blocks that a file of the given size can fit in, then returns the first block number in that run.
 int nextFreeRunFit(int sizeOfTargetRun)
 {
-    int startingBlock = 0;
     int i;
 
-    for(i = 0; i < 2048; i++)
+    for(i = 5; i < 2048; i++) // TODO should i start at 4?
     {
-        startingBlock = i;
-        if(countFreeRun(startingBlock) >= sizeOfTargetRun) return startingBlock;
+        if(countFreeRun(i) >= sizeOfTargetRun) return i;
     }
 
     return -1;
 }
 
 // Given a file, will move said file into memory and mark the bitmap appropriately
-int moveFileToMemory(int startBlockNum, int blockCount, int size, void * data)
+int moveFileToMemory(void * data, int size)
 {
+    int tempSize = size;
+    int blockCount = 0;
+
+    while(tempSize > 0)
+    {
+        tempSize = tempSize - BLOCK_SIZE;
+        blockCount++;
+    }
+
+    int startBlock = nextFreeRunFit(blockCount);
+
+    if(startBlock == -1)
+    {
+        printf("No more space left!!!\n");
+        return -1;
+    }
+
+    int offsetInBytes = startBlock * BLOCK_SIZE;
+
+    FILE *fp;
+    fp = fopen("disk", "r+");
+
+    fseek(fp, offsetInBytes, SEEK_SET);
+    fwrite(data, 1, size, fp);
+    fclose(fp);
+
+    int i;
+
+    for(i = startBlock; i < startBlock + blockCount; i++)
+    {
+        markTaken(i);
+    }
+
+
     return 0;
 }
 
@@ -259,6 +295,8 @@ int removeFileFromMemory(int startBlockNum, int blockCount)
 {
     return 0;
 }
+
+
 
 /* * * * * * * * * * * * * * *
 
