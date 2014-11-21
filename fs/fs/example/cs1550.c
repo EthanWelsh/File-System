@@ -73,13 +73,6 @@ int dirCount;
 
 
 
-/* * * * * * * * * * * * * * *
-
-        HELPER FUNCTIONS
-
- * * * * * * * * * * * * * * */
-
-
 // Prints the binary representation of a byte
 void printByte(char byte)
 {
@@ -89,6 +82,19 @@ void printByte(char byte)
     {
         bit = getBitFromByte(byte, i);
         printf("%d", bit);
+    }
+    printf("\n");
+}
+
+
+// Prints the bitmap 1 is allocated 0 is free
+void printBitMap()
+{
+    int i;
+    for(i = SIZE_OF_BITMAP; i < NUM_OF_BLOCKS; i++)
+    {
+        if(i % 50 == 0) printf("%d \n", blockStatus(i));
+        else printf("%d ", blockStatus(i));
     }
     printf("\n");
 }
@@ -206,7 +212,7 @@ void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
 // Return a specific bit from a given byte.
 unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to right
 {
-    byte = byte << (indexInByte);
+    byte = byte << indexInByte;
     unsigned char mask = 0x80;
 
     unsigned int bit = mask & byte;
@@ -219,14 +225,15 @@ unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to r
 // Given a block will return how many consecutive free blocks can be found after this block.
 int countFreeRun(int blockNum)
 {
-    int i;
 
-    int freeBlocksSoFar = 0;
 
     if(blockStatus(blockNum) == 1) return -1;
+    if(blockNum <= SIZE_OF_BITMAP) return -1; // Don't allow allocation over our bitmap.
 
+    int i;
+    int freeBlocksSoFar = 0;
 
-    for(i = blockNum; i < 2048; i++)
+    for(i = blockNum; i < NUM_OF_BLOCKS; i++)
     {
         if(blockStatus(i) == 0) freeBlocksSoFar++;
         else return freeBlocksSoFar;
@@ -241,7 +248,7 @@ int nextFreeRunFit(int sizeOfTargetRun)
 {
     int i;
 
-    for(i = 5; i < 2048; i++) // TODO should i start at 4?
+    for(i = SIZE_OF_BITMAP; i < NUM_OF_BLOCKS; i++) // TODO should be -1?
     {
         if(countFreeRun(i) >= sizeOfTargetRun) return i;
     }
@@ -285,7 +292,6 @@ int moveFileToMemory(void * data, int size)
         markTaken(i);
     }
 
-
     return 0;
 }
 
@@ -301,7 +307,12 @@ void removeFileFromMemory(int startBlockNum, int blockCount)
     }
 }
 
-
+/* TODO
+ * - Write a function that's able to handle growth of a file.
+ * - Write a function that's able to determine size in blocks from size in bytes.
+ * - Interface helper functions with file system.
+ * - Build in 'disk reformat' to align every file to the left as the disk fills up.
+ */
 
 
 /* * * * * * * * * * * * * * *
