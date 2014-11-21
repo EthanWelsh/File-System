@@ -126,14 +126,25 @@ static int markTaken(int x)
 }
 
 // Determines if the given block is free or taken
-static int blockStatus(int blockNum)
+int blockStatus(int blockNum)
 {
     FILE *fp;
     fopen(".disk", "w+");
 
+    int byteToSeekTo;
+    int indexIntoByte;
 
+    blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
 
+    fseek(fp, byteToSeekTo, SEEK_SET);
 
+    char byteFromFile;
+
+    fread(&byteFromFile, 1, 1, fp);
+
+    int bit = getBitFromByte(byteFromFile, indexIntoByte);
+
+    return bit;
 }
 
 // Given a block number will return which byte that block can be found at in our file (and the index into our byte)
