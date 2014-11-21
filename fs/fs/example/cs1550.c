@@ -8,6 +8,11 @@
 #include <errno.h>
 #include <fcntl.h>
 
+/* * * * * * * * * * * * * * *
+
+           DEFINES
+
+ * * * * * * * * * * * * * * */
 //size of a disk block
 #define    BLOCK_SIZE 512
 
@@ -25,6 +30,12 @@
 //How many pointers in an inode?
 #define NUM_POINTERS_IN_INODE ((BLOCK_SIZE - sizeof(unsigned int) - sizeof(unsigned long)) / sizeof(unsigned long))
 
+
+/* * * * * * * * * * * * * * *
+
+            STRUCTS
+
+ * * * * * * * * * * * * * * */
 struct cs1550_directory_entry
 {
     char dname[MAX_FILENAME + 1]; //the directory name (plus space for a null)
@@ -60,20 +71,15 @@ typedef struct cs1550_disk_block cs1550_disk_block;
 cs1550_directory_entry *dirs;
 int dirCount;
 
+/* * * * * * * * * * * * * * *
 
-/* getDir
- *
- * returns:
- *  + 1 when a directory has been success located.
- *  + 0 if a directory could not be located.
- *
- */
+        HELPER FUNCTIONS
+
+ * * * * * * * * * * * * * * */
 static char getDir(const char *path, cs1550_directory_entry *d)
 {
     FILE * fp;
     fp = fopen (".directories", "r");
-
-
 
     if(fp != NULL)
     {
@@ -86,10 +92,7 @@ static char getDir(const char *path, cs1550_directory_entry *d)
         // Read all the directories from our file into our array of dir structures.
         fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
 
-
-
         int i;
-
         for(i = 0; i < dirCount; i++)
         {
             if(strcmp(path,dirs[i].dname) == 0)
@@ -104,12 +107,100 @@ static char getDir(const char *path, cs1550_directory_entry *d)
     {
         printf("Error Reading File\n");
     }
-
-
     return 0;
+}
+
+// Given a block, marks said block as free
+static int markFree(int x)
+{
 
 }
 
+// Given a block, mark said block as taken
+static int markTaken(int x)
+{
+
+
+
+
+}
+
+// Determines if the given block is free or taken
+static int blockStatus(int blockNum)
+{
+    FILE *fp;
+    fopen(".disk", "w+");
+
+
+
+
+}
+
+// Given a block number will return which byte that block can be found at in our file (and the index into our byte)
+void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
+{
+    int i = 0;
+    int byte = 0;
+    int offset = 0;
+
+    for(i = 0; i < blockNum; i++)
+    {
+        if(i == 8)
+        {
+            byte++;
+            offset = 0;
+        }
+        else offset++;
+    }
+
+    *byteIndex = byte;
+    *indexIntoByte = offset;
+}
+
+// Return a specific bit from a given byte.
+int getBitFromByte(char byte, int indexInByte) // NOTE: index left to right
+{
+
+     byte = byte << (indexInByte - 1);
+     char mask = 0x80; // 1 0 0 0 0 0 0 0
+
+     int bit = mask & byte;
+
+     return bit;
+}
+
+// Given a file, will move said file into memory and mark the bitmap appropriately
+int moveFileToMemory(int startBlockNum, int blockCount, int size, void * data)
+{
+
+}
+
+// Marks a given region in memory as free
+int removeFileFromMemory(int startBlockNum, int blockCount)
+{
+
+}
+
+// Given a block will return how many consecutive free blocks can be found after this block.
+int countRun(int x)
+{
+
+}
+
+// Detects the next sequence of blocks that a file of the given size can fit in, then returns a pointer to that block.
+int nextRunFit(int sizeOfTargetRun)
+{
+
+}
+
+
+
+
+/* * * * * * * * * * * * * * *
+
+     FILESYSTEM FUNCTIONS
+
+ * * * * * * * * * * * * * * */
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
@@ -131,7 +222,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     }
     else
     {
-
         char directory[MAX_FILENAME + 1] = {0};
         char filename[MAX_FILENAME + 1] = {0};
         char extension[MAX_EXTENSION] = {0};
@@ -152,7 +242,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 printf("Found Directory. Name is %s\n", directory);
                 stbuf->st_mode = S_IFDIR | 0755;
                 stbuf->st_nlink = 2;
-
                 res = 0; // no error
             }
             else
@@ -168,9 +257,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             printf("==========GETATTR END==========\n");
             return -ENOENT;
         }
-
-
-        //TODO Else return that path doesn't exist
+        //TODO Else return that path doesn't exist for FILES
         // res = -ENOENT;
     }
     printf("==========GETATTR END==========\n");
@@ -189,8 +276,9 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     (void) offset;
     (void) fi;
 
-    printf("==========READDIR START==========\n");
+    //TODO support files in directories
 
+    printf("==========READDIR START==========\n");
 
     char directory[MAX_FILENAME + 1] = {0};
 
@@ -219,21 +307,8 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
         printf("FILLING IN %s\n", dirs[i].dname);
         filler(buf, dirs[i].dname, NULL, 0);
     }
-
-
-    //the filler function allows us to add entries to the listing
-    //read the fuse.h file for a description (in the ../include dir)
-
-
-
-
     printf("==========READDIR END==========\n");
 
-    /*
-    //add the user stuff (subdirs or files)
-    //the +1 skips the leading '/' on the filenames
-    filler(buf, newpath + 1, NULL, 0);
-    */
     return 0;
 }
 
@@ -255,7 +330,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 
     if(fp != NULL)
     {
-
         printf(".directories file opened sucessfully\n");
 
         // Read the first thing in the file, the number of dirs in the file.
@@ -267,16 +341,13 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         // Read all the directories from our file into our array of dir structures.
         fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
 
-        const char *slashlessPath = &path[1];
-
         cs1550_directory_entry *newDir = &dirs[dirCount];
 
-        strcpy(newDir->dname, slashlessPath);
+        strcpy(newDir->dname, path+1);
         newDir->nFiles = 0;
 
         dirCount++;
         printf("Changing dir count from %d to %d\n", dirCount - 1, dirCount);
-
 
         fp = fopen(".directories", "w");
 
@@ -290,23 +361,19 @@ static int cs1550_mkdir(const char *path, mode_t mode)
         printf(".directories file NOT opened sucessfully\n");
         printf("Creating new DIR\n");
 
-
         fp = fopen(".directories", "w");
 
         int one = 1;
 
         dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry));
 
-        const char *slashlessPath = &path[1];
-
-        strcpy(dirs[0].dname, slashlessPath);
+        strcpy(dirs[0].dname, path + 1);
         dirs[0].nFiles = 0;
 
         fwrite(&one, 1, sizeof(int), fp);
         fwrite(dirs, 1, sizeof(cs1550_directory_entry), fp);
 
         printf("WROTE FILE\n");
-
     }
 
     fclose(fp);
