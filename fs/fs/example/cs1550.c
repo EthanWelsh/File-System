@@ -76,60 +76,113 @@ int dirCount;
         HELPER FUNCTIONS
 
  * * * * * * * * * * * * * * */
-static char getDir(const char *path, cs1550_directory_entry *d)
+void printBinary(int number)
 {
-    FILE * fp;
-    fp = fopen (".directories", "r");
+    unsigned int bit;
 
-    if(fp != NULL)
+    for(int i = 0; i < 8; i++)
     {
-        // Read the first thing in the file, the number of dirs in the file.
-        fread(&dirCount, 1, sizeof(int), fp);
-
-        // Allocate space for all directories, plus an additional one which will be the one we add
-        dirs = (cs1550_directory_entry *) malloc(sizeof(cs1550_directory_entry) * dirCount);
-
-        // Read all the directories from our file into our array of dir structures.
-        fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
-
-        int i;
-        for(i = 0; i < dirCount; i++)
-        {
-            if(strcmp(path,dirs[i].dname) == 0)
-            { // If you've found a directory with a name that matches the one passed in.
-                printf("We found the DIR\n");
-                d = &dirs[i];
-                return 1;
-            }
-        }
+        bit = getBitFromByte(number, i);
+        printf("%d", bit);
     }
-    else
-    {
-        printf("Error Reading File\n");
-    }
+    printf("\n");
+}
+
+
+// Given a block, mark said block as taken
+int markTaken(int blockNum)
+{
+
+
+    FILE *fp;
+    fp = fopen("disk", "rb+");
+
+    int byteToSeekTo;
+    int indexIntoByte;
+
+    blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
+
+    int orMask = 0x80;
+
+    orMask = orMask >> indexIntoByte;
+
+    fseek(fp, byteToSeekTo, SEEK_SET);
+
+    char byteFromFile;
+    fread(&byteFromFile, 1, 1, fp);
+
+    printf("OLD: ");
+    printBinary(byteFromFile);
+
+    byteFromFile = byteFromFile | orMask;
+
+    printf("NEW: ");
+    printBinary(byteFromFile);
+
+
+    fwrite(&byteFromFile, 1, 1, fp);
+
+
     return 0;
 }
 
 // Given a block, marks said block as free
-static int markFree(int x)
+int markFree(int blockNum)
 {
+    FILE *fp;
+    fp = fopen("disk", "rb+");
 
-}
+    int byteToSeekTo;
+    int indexIntoByte;
 
-// Given a block, mark said block as taken
-static int markTaken(int x)
-{
+    blockToByteTranslation(blockNum, &byteToSeekTo, &indexIntoByte);
+
+    fseek(fp, byteToSeekTo, SEEK_SET);  // SEG FAULT
+
+    char byteFromFile;
+    fread(&byteFromFile, 1, 1, fp);
+
+    printf("BYTE: %d\nINDEX: %d\n", byteToSeekTo, indexIntoByte);
+
+    unsigned char orMask = 0x80;
+
+    orMask = orMask >> indexIntoByte;
+
+    printf("MASK: ");
+    printBinary(orMask);
+
+    orMask = ~orMask;
+
+    printf("MASK: ");
+    printBinary(orMask);
+
+    printf("OLD: ");
+    printBinary(byteFromFile);
+
+    byteFromFile = byteFromFile&orMask;
+
+    printf("NEW: ");
+    printBinary(byteFromFile);
+
+    fwrite(&byteFromFile, 1, 1, fp);
 
 
 
 
+
+
+
+
+
+
+    return 0;
 }
 
 // Determines if the given block is free or taken
 int blockStatus(int blockNum)
 {
     FILE *fp;
-    fopen(".disk", "w+");
+    fopen(".disk", "r");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -169,39 +222,40 @@ void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
 }
 
 // Return a specific bit from a given byte.
-int getBitFromByte(char byte, int indexInByte) // NOTE: index left to right
+unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to right
 {
 
-     byte = byte << (indexInByte - 1);
-     char mask = 0x80; // 1 0 0 0 0 0 0 0
+    byte = byte << (indexInByte);
+    unsigned char mask = 0x80;
 
-     int bit = mask & byte;
+    unsigned int bit = mask & byte;
 
-     return bit;
+    if(bit == 128) return 1;
+    else return 0;
 }
 
 // Given a file, will move said file into memory and mark the bitmap appropriately
 int moveFileToMemory(int startBlockNum, int blockCount, int size, void * data)
 {
-
+    return 0;
 }
 
 // Marks a given region in memory as free
 int removeFileFromMemory(int startBlockNum, int blockCount)
 {
-
+    return 0;
 }
 
 // Given a block will return how many consecutive free blocks can be found after this block.
-int countRun(int x)
+int countFreeRun(int blockNum)
 {
-
+    return 0;
 }
 
 // Detects the next sequence of blocks that a file of the given size can fit in, then returns a pointer to that block.
-int nextRunFit(int sizeOfTargetRun)
+int nextFreeRunFit(int sizeOfTargetRun)
 {
-
+    return 0;
 }
 
 
