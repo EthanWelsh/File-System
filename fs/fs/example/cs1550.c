@@ -76,13 +76,16 @@ int dirCount;
         HELPER FUNCTIONS
 
  * * * * * * * * * * * * * * */
-void printBinary(int number)
+
+
+// Prints the binary representation of a byte
+void printByte(char byte)
 {
     unsigned int bit;
 
     for(int i = 0; i < 8; i++)
     {
-        bit = getBitFromByte(number, i);
+        bit = getBitFromByte(byte, i);
         printf("%d", bit);
     }
     printf("\n");
@@ -92,10 +95,9 @@ void printBinary(int number)
 // Given a block, mark said block as taken
 int markTaken(int blockNum)
 {
-
-
+    printf("===========TAKEN=========\n");
     FILE *fp;
-    fp = fopen("disk", "rb+");
+    fp = fopen("disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -112,25 +114,25 @@ int markTaken(int blockNum)
     fread(&byteFromFile, 1, 1, fp);
 
     printf("OLD: ");
-    printBinary(byteFromFile);
+    printByte(byteFromFile);
 
     byteFromFile = byteFromFile | orMask;
 
     printf("NEW: ");
-    printBinary(byteFromFile);
-
+    printByte(byteFromFile);
 
     fwrite(&byteFromFile, 1, 1, fp);
-
 
     return 0;
 }
 
+
 // Given a block, marks said block as free
 int markFree(int blockNum)
 {
+    printf("===========FREE=========\n");
     FILE *fp;
-    fp = fopen("disk", "rb+");
+    fp = fopen("disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -142,47 +144,31 @@ int markFree(int blockNum)
     char byteFromFile;
     fread(&byteFromFile, 1, 1, fp);
 
-    printf("BYTE: %d\nINDEX: %d\n", byteToSeekTo, indexIntoByte);
-
     unsigned char orMask = 0x80;
 
     orMask = orMask >> indexIntoByte;
 
-    printf("MASK: ");
-    printBinary(orMask);
-
     orMask = ~orMask;
 
-    printf("MASK: ");
-    printBinary(orMask);
-
     printf("OLD: ");
-    printBinary(byteFromFile);
+    printByte(byteFromFile);
 
     byteFromFile = byteFromFile&orMask;
 
     printf("NEW: ");
-    printBinary(byteFromFile);
+    printByte(byteFromFile);
 
     fwrite(&byteFromFile, 1, 1, fp);
 
-
-
-
-
-
-
-
-
-
     return 0;
 }
+
 
 // Determines if the given block is free or taken
 int blockStatus(int blockNum)
 {
     FILE *fp;
-    fopen(".disk", "r");
+    fopen("disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -199,6 +185,7 @@ int blockStatus(int blockNum)
 
     return bit;
 }
+
 
 // Given a block number will return which byte that block can be found at in our file (and the index into our byte)
 void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
@@ -221,6 +208,7 @@ void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte)
     *indexIntoByte = offset;
 }
 
+
 // Return a specific bit from a given byte.
 unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to right
 {
@@ -234,11 +222,13 @@ unsigned int getBitFromByte(char byte, int indexInByte) // NOTE: index left to r
     else return 0;
 }
 
+
 // Given a file, will move said file into memory and mark the bitmap appropriately
 int moveFileToMemory(int startBlockNum, int blockCount, int size, void * data)
 {
     return 0;
 }
+
 
 // Marks a given region in memory as free
 int removeFileFromMemory(int startBlockNum, int blockCount)
@@ -246,18 +236,19 @@ int removeFileFromMemory(int startBlockNum, int blockCount)
     return 0;
 }
 
+
 // Given a block will return how many consecutive free blocks can be found after this block.
 int countFreeRun(int blockNum)
 {
     return 0;
 }
 
+
 // Detects the next sequence of blocks that a file of the given size can fit in, then returns a pointer to that block.
 int nextFreeRunFit(int sizeOfTargetRun)
 {
     return 0;
 }
-
 
 
 
