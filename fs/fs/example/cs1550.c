@@ -232,10 +232,19 @@ int countFreeRun(int blockNum)
 }
 
 
-// Detects the next sequence of blocks that a file of the given size can fit in, then returns a pointer to that block.
+// Detects the next sequence of blocks that a file of the given size can fit in, then returns the first block number in that run.
 int nextFreeRunFit(int sizeOfTargetRun)
 {
-    return 0;
+    int startingBlock = 0;
+    int i;
+
+    for(i = 0; i < 2048; i++)
+    {
+        startingBlock = i;
+        if(countFreeRun(startingBlock) >= sizeOfTargetRun) return startingBlock;
+    }
+
+    return -1;
 }
 
 // Given a file, will move said file into memory and mark the bitmap appropriately
