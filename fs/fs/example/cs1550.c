@@ -30,6 +30,25 @@
 //How many pointers in an inode?
 #define NUM_POINTERS_IN_INODE ((BLOCK_SIZE - sizeof(unsigned int) - sizeof(unsigned long)) / sizeof(unsigned long))
 
+/* * * * * * * * * * * * * * *
+
+      FUNCTION PROTOTYPES
+
+* * * * * * * * * * * * * * */
+
+int markFree(int blockNum);
+int markTaken(int blockNum);
+int blockStatus(int blockNum);
+void blockToByteTranslation(int blockNum, int *byteIndex, int *indexIntoByte);
+unsigned int getBitFromByte(char byte, int indexInByte);
+int moveFileToMemory(void * data, int size);
+void removeFileFromMemory(int startBlockNum, int blockCount);
+int countFreeRun(int blockNum);
+int nextFreeRunFit(int sizeOfTargetRun);
+void printByte(char byte);
+void printBitMap();
+
+
 
 /* * * * * * * * * * * * * * *
 
@@ -313,23 +332,9 @@ void removeFileFromMemory(int startBlockNum, int blockCount)
     }
 }
 
-/* TODO
- * - Write a function that's able to handle growth of a file.
- * - Write a function that's able to determine size in blocks from size in bytes.
- * - Interface helper functions with file system.
- * - Build in 'disk reformat' to align every file to the left as the disk fills up.
- */
 
-
-/* * * * * * * * * * * * * * *
-
-     FILESYSTEM FUNCTIONS
-
- * * * * * * * * * * * * * * */
-
-
-
-static char getDir(const char *path, cs1550_directory_entry *d)
+// Give a path, returns that path's directory.
+char getDir(const char *path, cs1550_directory_entry *d)
 {
     FILE * fp;
     fp = fopen (".directories", "r");
@@ -362,6 +367,23 @@ static char getDir(const char *path, cs1550_directory_entry *d)
     }
     return 0;
 }
+
+/* TODO
+ * - Write a function that's able to handle growth of a file.
+ * - Write a function that's able to determine size in blocks from size in bytes.
+ * - Interface helper functions with file system.
+ * - Build in 'disk reformat' to align every file to the left as the disk fills up.
+ */
+
+
+/* * * * * * * * * * * * * * *
+
+     FILESYSTEM FUNCTIONS
+
+ * * * * * * * * * * * * * * */
+
+
+
 
 
 static int cs1550_getattr(const char *path, struct stat *stbuf)
@@ -415,7 +437,37 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             }
         }
         else if(strcmp(filename, "")) // If the filename isn't empty
-        { // TODO handle files
+        {
+
+                          //\\
+                         //  \\
+                        //    \\
+                       //      \\
+                      //        \\
+                     //   TODO   \\
+                    // TODO TODO  \\
+                   // TODO   TODO  \\
+                  // TODO     TODO  \\
+                 // TODO       TODO  \\      <<< TODO TRIFORCE.
+                // TODO         TODO  \\
+               // TODO           TODO  \\
+              // TODO   T O D O   TODO  \\
+             // TODO  T         T  TODO  \\
+            // TODO    O       O    TODO  \\
+           // TODO      D     D      TODO  \\
+          // TODO        O   O        TODO  \\
+         // TODO TODO TODO   TODO TODO TODO  \\
+        //====================================\\
+
+            //regular file, probably want to be read and write
+            stbuf->st_mode = S_IFREG | 0666;
+            stbuf->st_nlink = 1; //file links
+            stbuf->st_size = 0; //file size - make sure you replace with real size!
+            res = 0; // no error
+
+
+
+
             printf("FILE?!?!?!?\n");
             printf("==========GETATTR END==========\n");
             return -ENOENT;
@@ -623,7 +675,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 }
 
 
-
+/
 
 
 
