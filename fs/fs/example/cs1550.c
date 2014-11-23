@@ -504,22 +504,30 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     printf("R: %d\n", strcmp(path, "fdsfdfd/"));
 
     //This line assumes we have no subdirectories, need to change TODO
-    if (strcmp(path, "/") != 0)
+    if (strcmp(path, "/") == 0)
     {
-        return -ENOENT;
+        printf("DIRCOUNT: %d\n", dirCount);
+
+        int i;
+        for (i = 0; i < dirCount; i++)
+        {
+            printf("FILLING IN %s\n", dirs[i].dname);
+            filler(buf, dirs[i].dname, NULL, 0);
+        }
+        printf("==========READDIR END==========\n");
+
+        return 0;
     }
-
-    printf("DIRCOUNT: %d\n", dirCount);
-
-    int i;
-    for(i = 0; i < dirCount; i++)
+    else
     {
-        printf("FILLING IN %s\n", dirs[i].dname);
-        filler(buf, dirs[i].dname, NULL, 0);
+        cs1550_directory_entry *mydir;
+        getDir(path, mydir);
+        int i;
+        for (i = 0; i < mydir->nFiles; i++)
+        {
+            filler(buf, mydir->files[i].fname, NULL, 0);
+        }
     }
-    printf("==========READDIR END==========\n");
-
-    return 0;
 }
 
 /* 
@@ -644,7 +652,6 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         dir->files[nFiles].nStartBlock = startBlock;
         dir->files[nFiles].fsize = 0;
         dir->nFiles++;
-
     }
 
     return 0;
@@ -689,16 +696,8 @@ static int cs1550_unlink(const char *path)
  */
 static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    (void) buf;
-    (void) offset;
-    (void) fi;
-    (void) path;
 
-    //check to make sure path exists
-    //check that size is > 0
-    //check that offset is <= to the file size
-    //read in data
-    //set size and return, or error
+    (void) fi;
 
     if(size < 0)
     {
@@ -833,10 +832,9 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                 moveFileToMemory(buffer, BLOCK_SIZE * sizeInBlocks);
 
                 fclose(fp);
-
             }
             else
-            {
+            { // If the write won't take us out of our current block...
                 int startBlock = dir->files[i].nStartBlock;
 
                 int offsetInBytes = startBlock * BLOCK_SIZE;
@@ -849,11 +847,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                 fclose(fp);
                 return size;
             }
-
-
-
-
-
         }
     }
 
