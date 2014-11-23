@@ -807,19 +807,53 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
             FILE *fp;
             fp = fopen("disk", "r+");
 
-            int startBlock = dir->files[i].nStartBlock;
 
-            int offsetInBytes = startBlock * BLOCK_SIZE;
+            if(getBlockSize(size + offset) > getBlockSize(dir->files[i].fsize))
+            { // If it is time to grow the file...
+
+                // Calculate the current size of the file.
+                int startBlock = dir->files[i].nStartBlock;
+                int sizeInBlocks = getBlockSize(dir->files[i].fsize);
+
+                // Remove the bitmap entries for this file
+                removeFileFromMemory(startBlock, sizeInBlocks);
+
+
+                FILE *fp;
+                fp = fopen(".disk","r+");
+
+                void *buffer = malloc(BLOCK_SIZE * sizeInBlocks);
+
+                fseek(fp, startBlock * BLOCK_SIZE, SEEK_SET);
+
+                // Read all the files blocks into a temporary buffer.
+                fread(buffer, 1, BLOCK_SIZE * sizeInBlocks, fp);
+
+                // Write the file into the disk and change the bitmap accordingly.
+                moveFileToMemory(buffer, BLOCK_SIZE * sizeInBlocks);
+
+                fclose(fp);
+
+            }
+            else
+            {
+                int startBlock = dir->files[i].nStartBlock;
+
+                int offsetInBytes = startBlock * BLOCK_SIZE;
+
+                int fileSizeInBlocks = getBlockSize(dir->files[i].fsize);
+
+                fseek(fp, offsetInBytes + offset, SEEK_SET);
+                fwrite(buf, 1, size, fp);
+
+                fclose(fp);
+                return size;
+            }
 
 
 
-            int fileSizeInBlocks = getBlockSize(dir->files[i].fsize);
 
-            fseek(fp, offsetInBytes + offset, SEEK_SET);
-            fwrite(buf, 1, size, fp);
 
-            fclose(fp);
-            return size;
         }
     }
 
