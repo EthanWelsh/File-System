@@ -402,8 +402,6 @@ int getBlockSize(size_t fsize)
 
 
 
-
-
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
@@ -456,19 +454,24 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
         }
         else if(strcmp(filename, "")) // If the filename isn't empty
         {
-            //regular file, probably want to be read and write
-            stbuf->st_mode = S_IFREG | 0666;
-            stbuf->st_nlink = 1; //file links
-            stbuf->st_size = 0; //file size - make sure you replace with real size!
-            res = 0; // no error
-
-
-            printf("FILE?!?!?!?\n");
-            printf("==========GETATTR END==========\n");
-            return -ENOENT;
+            cs1550_directory_entry targetDir;
+            if(getDir(directory, &targetDir))
+            {
+                int i;
+                for(i = 0; i < targetDir.nFiles; i++)
+                {
+                    if(strcmp(filename, targetDir.files[i].fname) == 0)
+                    {
+                        //regular file, probably want to be read and write
+                        stbuf->st_mode = S_IFREG | 0666;
+                        stbuf->st_nlink = 1; //file links
+                        stbuf->st_size = 0; //file size - make sure you replace with real size!
+                        return 0;
+                    }
+                }
+                return -ENOENT;
+            }
         }
-        //TODO Else return that path doesn't exist for FILES
-        // res = -ENOENT;
     }
     printf("==========GETATTR END==========\n");
     return res;
