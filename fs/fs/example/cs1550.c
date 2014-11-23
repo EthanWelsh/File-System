@@ -30,6 +30,10 @@
 //How many pointers in an inode?
 #define NUM_POINTERS_IN_INODE ((BLOCK_SIZE - sizeof(unsigned int) - sizeof(unsigned long)) / sizeof(unsigned long))
 
+#define    BLOCK_SIZE 512
+#define    SIZE_OF_BITMAP 3
+#define    NUM_OF_BLOCKS 10240
+
 /* * * * * * * * * * * * * * *
 
       FUNCTION PROTOTYPES
@@ -47,6 +51,7 @@ int countFreeRun(int blockNum);
 int nextFreeRunFit(int sizeOfTargetRun);
 void printByte(char byte);
 void printBitMap();
+int getBlockSize(size_t fsize);
 
 
 
@@ -105,7 +110,8 @@ void printByte(char byte)
 {
     unsigned int bit;
 
-    for(int i = 0; i < 8; i++)
+    int i = 0;
+    for(i = 0; i < 8; i++)
     {
         bit = getBitFromByte(byte, i);
         printf("%d", bit);
@@ -652,7 +658,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
     (void) fi;
     (void) path;
 
-
     //check that size is > 0
     if(size < 0)
     {
@@ -664,8 +669,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         printf("Your offset is larger than the file.\n");
         return -1;
     }
-
-
 
     char directory[MAX_FILENAME + 1] = {0};
     char filename[MAX_FILENAME + 1] = {0};
@@ -694,7 +697,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
     int i;
     for(i = 0; i < dir->nFiles; i++)
     {
-        if(strcmp(dir->files[i], filename) == 0)
+        if(strcmp(dir->files[i].fname, filename) == 0)
         {
             FILE *fp;
             fp = fopen("disk", "r+");
@@ -705,7 +708,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
 
 
-            int fileSizeInBlocks = sizeToBlockSize(dir->files[i].fsize);
+            int fileSizeInBlocks = getBlockSize(dir->files[i].fsize);
 
             fseek(fp, offsetInBytes + offset, SEEK_SET);
             fwrite(buf, 1, size, fp);
