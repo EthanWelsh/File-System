@@ -137,7 +137,7 @@ void printBitMap()
 int markTaken(int blockNum)
 {
     FILE *fp;
-    fp = fopen("disk", "r+");
+    fp = fopen(".disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -168,7 +168,7 @@ int markTaken(int blockNum)
 int markFree(int blockNum)
 {
     FILE *fp;
-    fp = fopen("disk", "r+");
+    fp = fopen(".disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -200,7 +200,7 @@ int markFree(int blockNum)
 int blockStatus(int blockNum)
 {
     FILE *fp;
-    fp = fopen("disk", "r+");
+    fp = fopen(".disk", "r+");
 
     int byteToSeekTo;
     int indexIntoByte;
@@ -310,7 +310,7 @@ int moveFileToMemory(void * data, int size)
     int offsetInBytes = startBlock * BLOCK_SIZE;
 
     FILE *fp;
-    fp = fopen("disk", "r+");
+    fp = fopen(".disk", "r+");
 
     fseek(fp, offsetInBytes, SEEK_SET);
     if(data != 0) fwrite(data, 1, size, fp);
@@ -384,14 +384,6 @@ int getBlockSize(size_t fsize)
     }
     return blockCount;
 }
-
-
-/* TODO
- * - Write a function that's able to handle growth of a file.
- * - Write a function that's able to determine size in blocks from size in bytes.
- * - Interface helper functions with file system.
- * - Build in 'disk reformat' to align every file to the left as the disk fills up.
- */
 
 
 /* * * * * * * * * * * * * * *
@@ -736,7 +728,7 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
         if(strcmp(dir->files[i].fname, filename) == 0)
         {
             FILE *fp;
-            fp = fopen("disk", "r+");
+            fp = fopen(".disk", "r+");
 
             int startBlock = dir->files[i].nStartBlock;
 
@@ -807,7 +799,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         if(strcmp(dir->files[i].fname, filename) == 0)
         {
             FILE *fp;
-            fp = fopen("disk", "r+");
+            fp = fopen(".disk", "r+");
 
 
             if(getBlockSize(size + offset) > getBlockSize(dir->files[i].fsize))
