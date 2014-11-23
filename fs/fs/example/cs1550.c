@@ -655,9 +655,32 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
  */
 static int cs1550_unlink(const char *path)
 {
-    (void) path;
+    char directory[MAX_FILENAME + 1] = {0};
+    char filename[MAX_FILENAME + 1] = {0};
+    char extension[MAX_EXTENSION] = {0};
 
-    return 0;
+    sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
+
+    cs1550_directory_entry *dir = NULL;
+    getDir(path, dir);
+
+    int i;
+    for(i = 0; i < dir->nFiles; i++)
+    {
+        if (strcmp(dir->files[i].fname, filename) == 0)
+        {
+            int startBlock = dir->files[i].nStartBlock;
+            int sizeInBlocks = getBlockSize(dir->files[i].fsize);
+
+            removeFileFromMemory(startBlock, sizeInBlocks);
+
+            memset((void *)&dir->files[i], 0, sizeof(struct cs1550_file_directory));
+
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 /* 
