@@ -368,6 +368,18 @@ char getDir(const char *path, cs1550_directory_entry *d)
     return 0;
 }
 
+int getBlockSize(size_t fsize)
+{
+    int blockCount = 0;
+    while(fsize > 0)
+    {
+        fsize = fsize - BLOCK_SIZE;
+        blockCount++;
+    }
+    return blockCount;
+}
+
+
 /* TODO
  * - Write a function that's able to handle growth of a file.
  * - Write a function that's able to determine size in blocks from size in bytes.
@@ -438,34 +450,11 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
         }
         else if(strcmp(filename, "")) // If the filename isn't empty
         {
-
-                          //\\
-                         //  \\
-                        //    \\
-                       //      \\
-                      //        \\
-                     //   TODO   \\
-                    // TODO TODO  \\
-                   // TODO   TODO  \\
-                  // TODO     TODO  \\
-                 // TODO       TODO  \\      <<< TODO TRIFORCE.
-                // TODO         TODO  \\
-               // TODO           TODO  \\
-              // TODO   T O D O   TODO  \\
-             // TODO  T         T  TODO  \\
-            // TODO    O       O    TODO  \\
-           // TODO      D     D      TODO  \\
-          // TODO        O   O        TODO  \\
-         // TODO TODO TODO   TODO TODO TODO  \\
-        //====================================\\
-
             //regular file, probably want to be read and write
             stbuf->st_mode = S_IFREG | 0666;
             stbuf->st_nlink = 1; //file links
             stbuf->st_size = 0; //file size - make sure you replace with real size!
             res = 0; // no error
-
-
 
 
             printf("FILE?!?!?!?\n");
@@ -664,23 +653,70 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
     (void) path;
 
 
+    //check that size is > 0
+    if(size < 0)
+    {
+        printf("Size too small.\n");
+        return -1;
+    }
+    if(offset > size)
+    {
+        printf("Your offset is larger than the file.\n");
+        return -1;
+    }
+
+
+
+    char directory[MAX_FILENAME + 1] = {0};
+    char filename[MAX_FILENAME + 1] = {0};
+    char extension[MAX_EXTENSION] = {0};
+
+    sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
+
+    cs1550_directory_entry *dir;
+
+
+    if(strcmp("/", directory) == 0)
+    {
+        printf("I'm sorry, but you can't create files in the root directory.\n");
+        return -1;
+    }
+
+    getDir(path, dir);
 
     //check to make sure path exists
-    //check that size is > 0
-    //check that offset is <= to the file size
-    //write data
-    //set size (should be same as input) and return, or error
+    if(dir == NULL)
+    {
+        printf("Cannot find specified directory.\n");
+        return -1;
+    }
 
-    return size;
+    int i;
+    for(i = 0; i < dir->nFiles; i++)
+    {
+        if(strcmp(dir->files[i], filename) == 0)
+        {
+            FILE *fp;
+            fp = fopen("disk", "r+");
+
+            int startBlock = dir->files[i].nStartBlock;
+
+            int offsetInBytes = startBlock * BLOCK_SIZE;
+
+
+
+            int fileSizeInBlocks = sizeToBlockSize(dir->files[i].fsize);
+
+            fseek(fp, offsetInBytes + offset, SEEK_SET);
+            fwrite(buf, 1, size, fp);
+
+            fclose(fp);
+            return size;
+        }
+    }
+
+    return -1;
 }
-
-
-/
-
-
-
-
-
 
 
 /******************************************************************************
