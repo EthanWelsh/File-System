@@ -610,6 +610,11 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     (void) mode;
     (void) dev;
     (void) path;
+
+
+
+
+
     return 0;
 }
 
@@ -634,17 +639,71 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
     (void) fi;
     (void) path;
 
-
-
     //check to make sure path exists
     //check that size is > 0
     //check that offset is <= to the file size
     //read in data
     //set size and return, or error
 
-    size = 0;
+    if(size < 0)
+    {
+        printf("Size too small.\n");
+        return -1;
+    }
+    if(offset > size)
+    {
+        printf("Your offset is larger than the file.\n");
+        return -1;
+    }
 
-    return size;
+    char directory[MAX_FILENAME + 1] = {0};
+    char filename[MAX_FILENAME + 1] = {0};
+    char extension[MAX_EXTENSION] = {0};
+
+    sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
+
+    cs1550_directory_entry *dir;
+
+
+    if(strcmp("/", directory) == 0)
+    {
+        printf("I'm sorry, but you can't create files in the root directory.\n");
+        return -1;
+    }
+
+    getDir(path, dir);
+
+    //check to make sure path exists
+    if(dir == NULL)
+    {
+        printf("Cannot find specified directory.\n");
+        return -1;
+    }
+
+    int i;
+    for(i = 0; i < dir->nFiles; i++)
+    {
+        if(strcmp(dir->files[i].fname, filename) == 0)
+        {
+            FILE *fp;
+            fp = fopen("disk", "r+");
+
+            int startBlock = dir->files[i].nStartBlock;
+
+            int offsetInBytes = startBlock * BLOCK_SIZE;
+
+            int fileSizeInBlocks = getBlockSize(dir->files[i].fsize);
+
+            fseek(fp, offsetInBytes + offset, SEEK_SET);
+            fread(buf, 1, size, fp);
+
+            fclose(fp);
+            return size;
+        }
+    }
+
+    return -1;
+
 }
 
 /* 
