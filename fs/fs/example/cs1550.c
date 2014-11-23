@@ -287,7 +287,7 @@ int nextFreeRunFit(int sizeOfTargetRun)
     return -1;
 }
 
-// Given a file, will move said file into memory and mark the bitmap appropriately
+// Given a file, will move said file into memory and mark the bitmap appropriately. Returns startblock.
 int moveFileToMemory(void * data, int size)
 {
     int tempSize = size;
@@ -313,7 +313,7 @@ int moveFileToMemory(void * data, int size)
     fp = fopen("disk", "r+");
 
     fseek(fp, offsetInBytes, SEEK_SET);
-    fwrite(data, 1, size, fp);
+    if(data != 0) fwrite(data, 1, size, fp);
     fclose(fp);
 
     int i;
@@ -323,7 +323,7 @@ int moveFileToMemory(void * data, int size)
         markTaken(i);
     }
 
-    return 0;
+    return startBlock;
 }
 
 
@@ -609,11 +609,43 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
     (void) mode;
     (void) dev;
-    (void) path;
 
+    char directory[MAX_FILENAME + 1] = {0};
+    char filename[MAX_FILENAME + 1] = {0};
+    char extension[MAX_EXTENSION] = {0};
 
+    sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
+    // Give a file a single block to start with.
+    int startBlock = moveFileToMemory(0, 1);
 
+    if(strcmp("/", directory) == 0)
+    {
+        printf("I'm sorry, but you can't create files in the root directory.\n");
+        return -1;
+    }
+
+    cs1550_directory_entry *dir;
+    getDir(path, dir);
+
+    //check to make sure path exists
+    if(dir == NULL)
+    {
+        printf("Cannot find specified directory.\n");
+        return -1;
+    }
+    else
+    {
+        int nFiles = dir->nFiles;
+
+        strcpy(dir->files[nFiles].fname, filename);
+        strcpy(dir->files[nFiles].fext, extension);
+
+        dir->files[nFiles].nStartBlock = startBlock;
+        dir->files[nFiles].fsize = 0;
+        dir->nFiles++;
+
+    }
 
     return 0;
 }
@@ -664,13 +696,6 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
 
     cs1550_directory_entry *dir;
 
-
-    if(strcmp("/", directory) == 0)
-    {
-        printf("I'm sorry, but you can't create files in the root directory.\n");
-        return -1;
-    }
-
     getDir(path, dir);
 
     //check to make sure path exists
@@ -701,9 +726,7 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
             return size;
         }
     }
-
     return -1;
-
 }
 
 /* 
