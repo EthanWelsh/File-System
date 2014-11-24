@@ -447,6 +447,8 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 int i;
                 for(i = 0; i < targetDir.nFiles; i++)
                 {
+
+
                     if(strcmp(filename, targetDir.files[i].fname) == 0)
                     {
                         //regular file, probably want to be read and write
@@ -649,6 +651,11 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 
     sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
+    printf("DIRECTORY: %s\n", directory);
+    printf("FILENAME: %s\n", filename);
+    printf("EXTENSION: %s\n", extension);
+
+
     // Give a file a single block to start with.
     int startBlock = moveFileToMemory(0, 1);
 
@@ -658,25 +665,22 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         return -1;
     }
 
-    cs1550_directory_entry *dir;
-    getDir(path, dir);
-
-    //check to make sure path exists
-    if(dir == NULL)
+    cs1550_directory_entry dir;
+    if(getDir(directory, &dir))
     {
-        printf("Cannot find specified directory.\n");
-        return -1;
+        int nFiles = dir.nFiles;
+
+        strcpy(dir.files[nFiles].fname, filename);
+        strcpy(dir.files[nFiles].fext, extension);
+
+        dir.files[nFiles].nStartBlock = startBlock;
+        dir.files[nFiles].fsize = 0;
+        dir.nFiles++;
     }
     else
     {
-        int nFiles = dir->nFiles;
-
-        strcpy(dir->files[nFiles].fname, filename);
-        strcpy(dir->files[nFiles].fext, extension);
-
-        dir->files[nFiles].nStartBlock = startBlock;
-        dir->files[nFiles].fsize = 0;
-        dir->nFiles++;
+        printf("Cannot find specified directory.\n");
+        return -1;
     }
 
     printf("===================================== MKNOD END =====================================\n");
@@ -695,7 +699,7 @@ static int cs1550_unlink(const char *path)
     sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
     cs1550_directory_entry *dir = NULL;
-    getDir(path, dir);
+    getDir(directory, dir);
 
     int i;
     for(i = 0; i < dir->nFiles; i++)
@@ -744,7 +748,7 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
 
     cs1550_directory_entry *dir;
 
-    getDir(path, dir);
+    getDir(directory, dir);
 
     //check to make sure path exists
     if(dir == NULL)
@@ -817,7 +821,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         return -1;
     }
 
-    getDir(path, dir);
+    getDir(directory, dir); // TODO should dir be a struct and not a pointer to a struct?
 
     //check to make sure path exists
     if(dir == NULL)
