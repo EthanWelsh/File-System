@@ -342,6 +342,8 @@ void removeFileFromMemory(int startBlockNum, int blockCount)
 // Give a path, returns that path's directory.
 char getDir(const char *path, cs1550_directory_entry *d)
 {
+
+    printf("===============GET DIR START=====================\n");
     FILE * fp;
     fp = fopen (".directories", "r");
 
@@ -356,13 +358,20 @@ char getDir(const char *path, cs1550_directory_entry *d)
         // Read all the directories from our file into our array of dir structures.
         fread(dirs, dirCount, sizeof(cs1550_directory_entry) * dirCount, fp);
 
+
+        printf("dirCount = %d\n", dirCount);
+        printf("path = '%s'\n", path);
+
         int i;
         for(i = 0; i < dirCount; i++)
         {
-            if(strcmp(path,dirs[i].dname) == 0)
+
+            printf("%s == %s\n", path, dirs[i].dname);
+
+            if(strcmp(path, dirs[i].dname) == 0)
             { // If you've found a directory with a name that matches the one passed in.
-                printf("We found the DIR\n");
-                d = &dirs[i];
+                printf("We found the DIR... It's '%s'\n", dirs[i].dname);
+                *d = dirs[i];
                 return 1;
             }
         }
@@ -371,6 +380,8 @@ char getDir(const char *path, cs1550_directory_entry *d)
     {
         printf("Error Reading File\n");
     }
+
+
     return 0;
 }
 
@@ -426,26 +437,10 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
         printf("Extension: %s\n", extension);
 
 
-        if(strcmp(directory, ""))
+        if(strcmp(filename, "")) // If the filename isn't empty
         {
-            printf("GETTING DIRECTORY\n");
-            cs1550_directory_entry targetDir;
-            if(getDir(directory, &targetDir))
-            { // If the file could be found...
-                printf("Found Directory. Name is %s\n", directory);
-                stbuf->st_mode = S_IFDIR | 0755;
-                stbuf->st_nlink = 2;
-                res = 0; // no error
-            }
-            else
-            { // If the file could NOT be found...
-                printf("%s could not be found \n", directory);
-                printf("==========GETATTR END==========\n");
-                return -ENOENT;
-            }
-        }
-        else if(strcmp(filename, "")) // If the filename isn't empty
-        {
+            printf("fIlE sTuFf\n");
+
             cs1550_directory_entry targetDir;
             if(getDir(directory, &targetDir))
             {
@@ -464,6 +459,27 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 return -ENOENT;
             }
         }
+
+        if(strcmp(directory, ""))
+        {
+            printf("GETTING DIRECTORY\n");
+            cs1550_directory_entry targetDir;
+            if(getDir(directory, &targetDir))
+            { // If the file could be found...
+                printf("Found Directory. Name is %s\n", directory);
+                stbuf->st_mode = S_IFDIR | 0755;
+                stbuf->st_nlink = 2;
+                res = 0; // no error
+            }
+            else
+            { // If the file could NOT be found...
+                printf("%s could not be found \n", directory);
+                printf("==========GETATTR END==========\n");
+                return -ENOENT;
+            }
+        }
+
+
     }
     printf("==========GETATTR END==========\n");
     return res;
@@ -481,9 +497,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     (void) offset;
     (void) fi;
 
-    //TODO support files in directories
-
-    printf("==========READDIR START==========\n");
+    printf("===================================== READDIR START =====================================\n");
 
     char directory[MAX_FILENAME + 1] = {0};
 
@@ -495,8 +509,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     filler(buf, "..", NULL, 0);
 
     printf("PATH: %s\n", path);
-    printf("R: %d\n", strcmp(path, "/"));
-    printf("R: %d\n", strcmp(path, "fdsfdfd/"));
 
     //This line assumes we have no subdirectories, need to change TODO
     if (strcmp(path, "/") == 0)
@@ -509,20 +521,35 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
             printf("FILLING IN %s\n", dirs[i].dname);
             filler(buf, dirs[i].dname, NULL, 0);
         }
-        printf("==========READDIR END==========\n");
+        printf("===================================== READDIR END =====================================\n");
 
         return 0;
     }
     else
     {
-        cs1550_directory_entry *mydir;
-        getDir(path, mydir);
-        int i;
-        for (i = 0; i < mydir->nFiles; i++)
+        printf("HEREHE %s\n", path);
+        cs1550_directory_entry mydir;
+
+        if(getDir(directory, &mydir))
         {
-            filler(buf, mydir->files[i].fname, NULL, 0);
+            printf("Got DIR\n");
+            printf("DIR NAME = %s\n", mydir.dname);
+            printf("DIR NAME = %d\n", mydir.nFiles);
+
+            int i;
+            for (i = 0; i < mydir.nFiles; i++)
+            {
+                filler(buf, mydir.files[i].fname, NULL, 0);
+            }
+            printf("---~---\n");
+        }
+        else
+        {
+            printf("We could find your dir... SORRY!\n");
         }
     }
+    printf("===================================== READDIR END =====================================\n");
+    return 0;
 }
 
 /* 
@@ -613,6 +640,9 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     (void) mode;
     (void) dev;
 
+    printf("===================================== MKNOD START =====================================\n");
+
+
     char directory[MAX_FILENAME + 1] = {0};
     char filename[MAX_FILENAME + 1] = {0};
     char extension[MAX_EXTENSION] = {0};
@@ -649,6 +679,7 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         dir->nFiles++;
     }
 
+    printf("===================================== MKNOD END =====================================\n");
     return 0;
 }
 
@@ -757,6 +788,8 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
     (void) fi;
     (void) path;
 
+    printf("===================================== WRITE START =====================================\n");
+
     //check that size is > 0
     if(size < 0)
     {
@@ -840,6 +873,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                 fwrite(buf, 1, size, fp);
 
                 fclose(fp);
+                printf("===================================== WRITE END =====================================\n");
                 return size;
             }
         }
