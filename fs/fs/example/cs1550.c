@@ -695,6 +695,9 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
 
     (void) fi;
 
+
+    memset(buf, 0, size);
+
     printf("===================================== READ START =====================================\n");
 
     if(size <= 0)
@@ -732,7 +735,7 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
         if(strcmp(dir.files[i].fname, filename) == 0)
         {
             FILE *fp;
-            fp = fopen(".disk", "r+");
+            fp = fopen(".disk", "r");
 
             int startBlock = dir.files[i].nStartBlock;
 
@@ -741,6 +744,8 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
             fseek(fp, offsetInBytes + offset, SEEK_SET);
             int ret = fread(buf, 1, size, fp);
 
+
+            printf("%d == %d\n", ret, size);
             printf("READ: %s\n", buf);
 
             fclose(fp);
@@ -860,6 +865,46 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                 fwrite(buf, 1, size, fp);
 
                 fclose(fp);
+
+                fp = fopen(".directories", "r+");
+
+                if(fp)
+                {
+                    cs1550_directory_entry searchDir;
+                    while(fread(&searchDir, 1, sizeof(cs1550_directory_entry), fp))
+                    {
+                        if(!strcmp(searchDir.dname, directory))
+                        {
+
+                            int i;
+
+                            for(i = 0; i < searchDir.nFiles; i++)
+                            {
+                                if(!strcmp(searchDir.files[i].fname, filename))
+                                {
+                                    //printf("%d > %d\n", offset + size, searchDir.files[i].fsize);
+                                    if((offset + size) > searchDir.files[i].fsize)
+                                    {
+                                        printf("Update...\n");
+                                        searchDir.files[i].fsize = offset + size;
+                                    }
+
+                                    //printf("Updated file to have the correct size %d\n", searchDir.files[i].fsize);
+
+                                    fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
+                                    fwrite(&searchDir, 1, sizeof(cs1550_directory_entry), fp);
+                                    fclose(fp);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+
+
+
                 printf("===================================== WRITE END =====================================\n");
                 return size;
             }
