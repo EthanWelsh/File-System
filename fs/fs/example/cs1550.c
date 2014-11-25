@@ -343,6 +343,7 @@ char getDir(const char *path, cs1550_directory_entry *d)
             if(strcmp(path, ret.dname) == 0)
             { // If you've found a directory with a name that matches the one passed in.
                 *d = ret;
+                printf("===============GET DIR END=====================\n");
                 return 1;
             }
 
@@ -350,6 +351,8 @@ char getDir(const char *path, cs1550_directory_entry *d)
     }
 
     printf("Sorry, we couldn't find your file.\n");
+    printf("===============GET DIR END=====================\n");
+
     return 0;
 }
 
@@ -748,10 +751,8 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
  */
 static int cs1550_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    (void) buf;
-    (void) offset;
+
     (void) fi;
-    (void) path;
 
     printf("===================================== WRITE START =====================================\n");
 
@@ -761,11 +762,16 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         printf("Size too small.\n");
         return -1;
     }
+
+    printf("A\n");
+
     if(offset > size)
     {
         printf("Your offset is larger than the file.\n");
         return -1;
     }
+
+    printf("B\n");
 
     char directory[MAX_FILENAME + 1] = {0};
     char filename[MAX_FILENAME + 1] = {0};
@@ -773,7 +779,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
     sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
-    cs1550_directory_entry *dir = NULL;
+    printf("C\n");
 
 
     if(strcmp("/", directory) == 0)
@@ -782,37 +788,42 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         return -1;
     }
 
-    getDir(directory, dir); // TODO should dir be a struct and not a pointer to a struct?
+    printf("D\n");
+
+    cs1550_directory_entry dir;
 
     //check to make sure path exists
-    if(dir == NULL)
+    if(!getDir(directory, &dir))
     {
         printf("Cannot find specified directory.\n");
         return -1;
     }
 
+    printf("E\n");
+
     int i;
-    for(i = 0; i < dir->nFiles; i++)
+    for(i = 0; i < dir.nFiles; i++)
     {
-        if(strcmp(dir->files[i].fname, filename) == 0)
+        printf("I made it into the loop\n");
+        if(!strcmp(dir.files[i].fname, filename))
         {
-            FILE *fp;
-            fp = fopen(".disk", "r+");
 
+            printf("I've found a positive match.\n");
 
-            if(getBlockSize(size + offset) > getBlockSize(dir->files[i].fsize))
+            //if(getBlockSize(size + offset) > getBlockSize(dir.files[i].fsize))
+            if(0) // TODO handle appends
             { // If it is time to grow the file...
 
+                printf("We're growing the file\n");
                 // Calculate the current size of the file.
-                int startBlock = dir->files[i].nStartBlock;
-                int sizeInBlocks = getBlockSize(dir->files[i].fsize);
+                int startBlock = dir.files[i].nStartBlock;
+                int sizeInBlocks = getBlockSize(dir.files[i].fsize);
 
                 // Remove the bitmap entries for this file
                 removeFileFromMemory(startBlock, sizeInBlocks);
 
-
                 FILE *fp;
-                fp = fopen(".disk","r+");
+                fp = fopen(".disk","r");
 
                 void *buffer = malloc(BLOCK_SIZE * sizeInBlocks);
 
@@ -821,14 +832,20 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                 // Read all the files blocks into a temporary buffer.
                 fread(buffer, 1, BLOCK_SIZE * sizeInBlocks, fp);
 
+                fclose(fp);
+
                 // Write the file into the disk and change the bitmap accordingly.
                 moveFileToMemory(buffer, BLOCK_SIZE * sizeInBlocks);
-
-                fclose(fp);
             }
             else
             { // If the write won't take us out of our current block...
-                int startBlock = dir->files[i].nStartBlock;
+
+                printf("Simple write...\n");
+
+                FILE *fp;
+                fp = fopen(".disk", "r+");
+
+                int startBlock = dir.files[i].nStartBlock;
 
                 int offsetInBytes = startBlock * BLOCK_SIZE;
 
@@ -842,6 +859,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         }
     }
 
+    printf("===================================== WRITE END (FAIL) =====================================\n");
     return -1;
 }
 
