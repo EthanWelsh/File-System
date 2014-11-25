@@ -695,14 +695,18 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
 
     (void) fi;
 
+    printf("===================================== READ START =====================================\n");
+
     if(size <= 0)
     {
         printf("Size too small.\n");
+        printf("===================================== READ END (FAIL 1) =====================================\n");
         return -1;
     }
     if(offset > size)
     {
         printf("Your offset is larger than the file.\n");
+        printf("===================================== READ END (FAIL 2) =====================================\n");
         return -1;
     }
 
@@ -712,36 +716,39 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
 
     sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
-    cs1550_directory_entry *dir = NULL;
-
-    getDir(directory, dir);
+    cs1550_directory_entry dir;
 
     //check to make sure path exists
-    if(dir == NULL)
+    if(!getDir(directory, &dir))
     {
         printf("Cannot find specified directory.\n");
+        printf("===================================== READ END (FAIL 3) =====================================\n");
         return -1;
     }
 
     int i;
-    for(i = 0; i < dir->nFiles; i++)
+    for(i = 0; i < dir.nFiles; i++)
     {
-        if(strcmp(dir->files[i].fname, filename) == 0)
+        if(strcmp(dir.files[i].fname, filename) == 0)
         {
             FILE *fp;
             fp = fopen(".disk", "r+");
 
-            int startBlock = dir->files[i].nStartBlock;
+            int startBlock = dir.files[i].nStartBlock;
 
             int offsetInBytes = startBlock * BLOCK_SIZE;
 
             fseek(fp, offsetInBytes + offset, SEEK_SET);
-            fread(buf, 1, size, fp);
+            int ret = fread(buf, 1, size, fp);
+
+            printf("READ: %s\n", buf);
 
             fclose(fp);
-            return size;
+            printf("===================================== READ END =====================================\n");
+            return ret;
         }
     }
+    printf("===================================== READ END (FAIL 4) =====================================\n");
     return -1;
 }
 
