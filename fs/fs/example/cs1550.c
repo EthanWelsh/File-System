@@ -434,17 +434,17 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 int i;
                 for(i = 0; i < targetDir.nFiles; i++)
                 {
-
-
-                    if(strcmp(filename, targetDir.files[i].fname) == 0)
+                    if(!strcmp(filename, targetDir.files[i].fname))
                     {
                         //regular file, probably want to be read and write
                         stbuf->st_mode = S_IFREG | 0666;
                         stbuf->st_nlink = 1; //file links
-                        stbuf->st_size = 0; //file size - make sure you replace with real size!
+                        stbuf->st_size = targetDir.files[i].fsize;
+                        printf("==========GETATTR END==========\n");
                         return 0;
                     }
                 }
+                printf("==========GETATTR END (FAIL 1)==========\n");
                 return -ENOENT;
             }
         }
@@ -463,7 +463,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
             else
             { // If the file could NOT be found...
                 printf("%s could not be found \n", directory);
-                printf("==========GETATTR END==========\n");
+                printf("==========GETATTR END (FAIL 1)==========\n");
                 return -ENOENT;
             }
         }
@@ -617,31 +617,37 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         return -1;
     }
 
-    cs1550_directory_entry dir;
-    if(getDir(directory, &dir))
+    FILE *fp;
+
+    fp = fopen(".directories", "r+");
+
+    if(fp)
     {
-        printf("Now adding file to %s\n", dir.dname);
+        cs1550_directory_entry searchDir;
+        while(fread(&searchDir, 1, sizeof(cs1550_directory_entry), fp))
+        {
+            if(!strcmp(searchDir.dname, directory))
+            {
 
-        int nFiles = dir.nFiles;
+                strcpy(searchDir.files[searchDir.nFiles].fname, filename);
+                strcpy(searchDir.files[searchDir.nFiles].fext, extension);
+                searchDir.files[searchDir.nFiles].fsize = 0;
+                searchDir.files[searchDir.nFiles].nStartBlock = startBlock;
 
-        strcpy(dir.files[nFiles].fname, filename);
-        strcpy(dir.files[nFiles].fext, extension);
+                searchDir.nFiles++;
 
-        dir.files[nFiles].nStartBlock = startBlock;
-        dir.files[nFiles].fsize = 0;
-        dir.nFiles++;
-
-        int blank = 0; // put placeholder
-        moveFileToMemory(&blank, sizeof(int));
+                fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
+                fwrite(&searchDir, 1, sizeof(cs1550_directory_entry), fp);
+                fclose(fp);
+                printf("===================================== MKNOD END =====================================\n");
+                return 0;
+            }
+        }
     }
-    else
-    {
-        printf("Cannot find specified directory.\n");
-        return -1;
-    }
 
-    printf("===================================== MKNOD END =====================================\n");
-    return 0;
+    fclose(fp);
+    printf("===================================== MKNOD END (FAIL) =====================================\n");
+    return -1;
 }
 
 /*
