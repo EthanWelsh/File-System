@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#import <math.h>
 
 /* * * * * * * * * * * * * * *
 
@@ -376,14 +377,26 @@ void addFileToDir(const char *path, struct cs1550_file_directory newFile)
 // find out how many blocks you'll need to store a file of a given size.
 int getBlockSize(size_t fsize)
 {
-    int blockCount = 0;
+    /*int blockCount = 0;
     while(fsize > 0)
     {
         fsize = fsize - BLOCK_SIZE;
         blockCount++;
     }
 
-    return blockCount;
+    if(blockCount == 0) return 1;
+    else return blockCount;*/
+
+    if(fsize == 0) return 1;
+    else
+    {
+        int blockSize = fsize / BLOCK_SIZE;
+        int remainder = fsize % BLOCK_SIZE;
+
+        if(remainder != 0) blockSize++;
+
+        return blockSize;
+    }
 }
 
 
@@ -504,7 +517,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
 
     printf("PATH: %s\n", path);
 
-    //This line assumes we have no subdirectories, need to change TODO
+
     if (strcmp(path, "/") == 0)
     {
         FILE *fp;
@@ -518,8 +531,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
                 filler(buf, dir.dname, NULL, 0);
             }
         }
-
-
 
         printf("===================================== READDIR END =====================================\n");
 
@@ -658,31 +669,33 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
  */
 static int cs1550_unlink(const char *path)
 {
+    printf("===================================== UNLINK START =====================================\n");
+
     char directory[MAX_FILENAME + 1] = {0};
     char filename[MAX_FILENAME + 1] = {0};
     char extension[MAX_EXTENSION] = {0};
 
     sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
-    cs1550_directory_entry *dir = NULL;
-    getDir(directory, dir);
+    cs1550_directory_entry dir;
+    getDir(directory, &dir);
 
     int i;
-    for(i = 0; i < dir->nFiles; i++)
+    for(i = 0; i < dir.nFiles; i++)
     {
-        if (strcmp(dir->files[i].fname, filename) == 0)
+        if (strcmp(dir.files[i].fname, filename) == 0)
         {
-            int startBlock = dir->files[i].nStartBlock;
-            int sizeInBlocks = getBlockSize(dir->files[i].fsize);
+            int startBlock = dir.files[i].nStartBlock;
+            int sizeInBlocks = getBlockSize(dir.files[i].fsize);
 
             removeFileFromMemory(startBlock, sizeInBlocks);
 
-            memset((void *)&dir->files[i], 0, sizeof(struct cs1550_file_directory));
-
+            memset((void *)&dir.files[i], 0, sizeof(struct cs1550_file_directory));
+            printf("===================================== UNLINK END =====================================\n");
             return 0;
         }
     }
-
+    printf("===================================== UNLINK END (FAIL) =====================================\n");
     return -1;
 }
 
@@ -775,15 +788,11 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         return -1;
     }
 
-    printf("A\n");
-
     if(offset > size)
     {
         printf("Your offset is larger than the file.\n");
         return -1;
     }
-
-    printf("B\n");
 
     char directory[MAX_FILENAME + 1] = {0};
     char filename[MAX_FILENAME + 1] = {0};
@@ -791,16 +800,11 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
     sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
 
-    printf("C\n");
-
-
     if(strcmp("/", directory) == 0)
     {
         printf("I'm sorry, but you can't create files in the root directory.\n");
         return -1;
     }
-
-    printf("D\n");
 
     cs1550_directory_entry dir;
 
@@ -810,8 +814,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
         printf("Cannot find specified directory.\n");
         return -1;
     }
-
-    printf("E\n");
 
     int i;
     for(i = 0; i < dir.nFiles; i++)
@@ -882,14 +884,11 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                             {
                                 if(!strcmp(searchDir.files[i].fname, filename))
                                 {
-                                    //printf("%d > %d\n", offset + size, searchDir.files[i].fsize);
                                     if((offset + size) > searchDir.files[i].fsize)
                                     {
                                         printf("Update...\n");
                                         searchDir.files[i].fsize = offset + size;
                                     }
-
-                                    //printf("Updated file to have the correct size %d\n", searchDir.files[i].fsize);
 
                                     fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
                                     fwrite(&searchDir, 1, sizeof(cs1550_directory_entry), fp);
