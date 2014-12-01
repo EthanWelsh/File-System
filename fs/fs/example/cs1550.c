@@ -377,16 +377,6 @@ void addFileToDir(const char *path, struct cs1550_file_directory newFile)
 // find out how many blocks you'll need to store a file of a given size.
 int getBlockSize(size_t fsize)
 {
-    /*int blockCount = 0;
-    while(fsize > 0)
-    {
-        fsize = fsize - BLOCK_SIZE;
-        blockCount++;
-    }
-
-    if(blockCount == 0) return 1;
-    else return blockCount;*/
-
     if(fsize == 0) return 1;
     else
     {
