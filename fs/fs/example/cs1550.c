@@ -853,7 +853,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                             {
                                 if(!strcmp(searchDir.files[i].fname, filename))
                                 {
-
                                     printf("OLD: start(%d), size(%d)\n", searchDir.files[i].nStartBlock, searchDir.files[i].fsize);
 
                                     searchDir.files[i].nStartBlock = newStartBlock;
@@ -873,8 +872,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                         }
                     }
                 }
-
-
             }
             else
             { // If the write won't take us out of our current block...
