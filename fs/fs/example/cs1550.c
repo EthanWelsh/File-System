@@ -814,8 +814,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
             printf("I've found a positive match.\n");
 
-            //if(getBlockSize(size + offset) > getBlockSize(dir.files[i].fsize))
-            if(0) // TODO handle appends
+            if(getBlockSize(size + offset) > getBlockSize(dir.files[i].fsize))
             { // If it is time to grow the file...
 
                 printf("We're growing the file\n");
@@ -836,10 +835,46 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                 // Read all the files blocks into a temporary buffer.
                 fread(buffer, 1, BLOCK_SIZE * sizeInBlocks, fp);
 
-                fclose(fp);
-
                 // Write the file into the disk and change the bitmap accordingly.
-                moveFileToMemory(buffer, BLOCK_SIZE * sizeInBlocks);
+                int newStartBlock = moveFileToMemory(buffer, BLOCK_SIZE * sizeInBlocks);
+
+                fp = fopen(".directories", "r+");
+
+
+                if(fp)
+                {
+                    cs1550_directory_entry searchDir;
+                    while(fread(&searchDir, 1, sizeof(cs1550_directory_entry), fp))
+                    {
+                        if(!strcmp(searchDir.dname, directory))
+                        {
+                            int i;
+                            for(i = 0; i < searchDir.nFiles; i++)
+                            {
+                                if(!strcmp(searchDir.files[i].fname, filename))
+                                {
+
+                                    printf("OLD: start(%d), size(%d)\n", searchDir.files[i].nStartBlock, searchDir.files[i].fsize);
+
+                                    searchDir.files[i].nStartBlock = newStartBlock;
+                                    searchDir.files[i].fsize = size + offset;
+
+                                    printf("NEW: start(%d), size(%d)\n", searchDir.files[i].nStartBlock, searchDir.files[i].fsize);
+
+                                    fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
+                                    fwrite(&searchDir, 1, sizeof(cs1550_directory_entry), fp);
+                                    fclose(fp);
+
+                                    printf("===================================== WRITE END =====================================\n");
+                                    return size;
+
+                                }
+                            }
+                        }
+                    }
+                }
+
+
             }
             else
             { // If the write won't take us out of our current block...
@@ -890,9 +925,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                         }
                     }
                 }
-
-
-
 
                 printf("===================================== WRITE END =====================================\n");
                 return size;
