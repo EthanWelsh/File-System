@@ -308,7 +308,6 @@ void removeFileFromMemory(int startBlockNum, int blockCount)
 // Give a path, returns that path's directory.
 char getDir(const char *path, cs1550_directory_entry *d)
 {
-
     printf("===============GET DIR START=====================\n");
     FILE * fp;
     fp = fopen (".directories", "r");
@@ -446,8 +445,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
                 return -ENOENT;
             }
         }
-
-
     }
     printf("==========GETATTR END==========\n");
     return res;
@@ -517,6 +514,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
     printf("===================================== READDIR END =====================================\n");
     return 0;
 }
+
 
 /* 
  * Creates a directory. We can ignore mode since we're not dealing with
@@ -682,9 +680,7 @@ static int cs1550_unlink(const char *path)
  */
 static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-
     (void) fi;
-
 
     memset(buf, 0, size);
 
