@@ -601,6 +601,11 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
                 searchDir.files[searchDir.nFiles].fsize = 0;
                 searchDir.files[searchDir.nFiles].nStartBlock = startBlock;
 
+                if(searchDir.nFiles >= MAX_FILES_IN_DIR)
+                {
+                    printf("You can't add any more files to this directory... Sorry!\n");
+                    return -1;
+                }
                 searchDir.nFiles++;
 
                 fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
@@ -723,6 +728,12 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
             FILE *fp;
             fp = fopen(".disk", "r");
 
+            if(offset + size > dir.files[i].fsize)
+            {
+                printf("You tried reading past what we've got to offer.\n");
+                size = dir.files[i].fsize - offset;
+            }
+
             int startBlock = dir.files[i].nStartBlock;
 
             int offsetInBytes = startBlock * BLOCK_SIZE;
@@ -816,6 +827,12 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
                 // Write the file into the disk and change the bitmap accordingly.
                 int newStartBlock = moveFileToMemory(buffer, BLOCK_SIZE * sizeInBlocks);
+
+                if(newStartBlock == -1)
+                {
+                    printf("Error... Out of space!\n");
+                    return -1;
+                }
 
                 fp = fopen(".directories", "r+");
 
