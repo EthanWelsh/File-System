@@ -361,6 +361,8 @@ void format(struct cs1550_file_directory *a, int size, int indexToDelete)
     }
 }
 
+
+
 /* * * * * * * * * * * * * * *
 
      FILESYSTEM FUNCTIONS
