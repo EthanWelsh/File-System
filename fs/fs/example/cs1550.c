@@ -49,11 +49,11 @@ struct cs1550_directory_entry
 
     struct cs1550_file_directory
     {
-        char fname[MAX_FILENAME + 1];    //filename (plus space for nul)
-        char fext[MAX_EXTENSION + 1];    //extension (plus space for nul)
-        size_t fsize;            //file size
-        long nStartBlock;        //where the first block is on disk
-    } files[MAX_FILES_IN_DIR];        //There is an array of these
+        char fname[MAX_FILENAME + 1];   //filename (plus space for nul)
+        char fext[MAX_EXTENSION + 1];   //extension (plus space for nul)
+        size_t fsize;                   //file size
+        long nStartBlock;               //where the first block is on disk
+    } files[MAX_FILES_IN_DIR];          //There is an array of these
 };
 
 typedef struct cs1550_directory_entry cs1550_directory_entry;
@@ -67,12 +67,6 @@ struct cs1550_disk_block
 
 typedef struct cs1550_disk_block cs1550_disk_block;
 
-/*
- * Called whenever the system wants to know the file attributes, including
- * simply whether the file exists or not. 
- *
- * man -s 2 stat will show the fields of a stat structure
- */
 
 
 /* * * * * * * * * * * * * * *
@@ -89,31 +83,13 @@ int moveFileToMemory(void *, int);
 void removeFileFromMemory(int, int);
 int countFreeRun(int);
 int nextFreeRunFit(int);
-void printByte(char);
 int getBlockSize(size_t);
 char getDir(const char *, cs1550_directory_entry *);
-void addFileToDir(const char *, struct cs1550_file_directory);
 /* * * * * * * * * * * * * * *
 
         HELPER FUNCTIONS
 
  * * * * * * * * * * * * * * */
-
-
-
-// Prints the binary representation of a byte
-void printByte(char byte)
-{
-    unsigned int bit;
-
-    int i = 0;
-    for(i = 0; i < 8; i++)
-    {
-        bit = getBitFromByte(byte, i);
-        printf("%d", bit);
-    }
-    printf("\n");
-}
 
 
 // Given a block, mark said block as taken
@@ -262,7 +238,7 @@ int nextFreeRunFit(int sizeOfTargetRun)
 {
     int i;
 
-    for(i = SIZE_OF_BITMAP; i < NUM_OF_BLOCKS; i++) // TODO should be -1?
+    for(i = SIZE_OF_BITMAP; i < NUM_OF_BLOCKS; i++)
     {
         if(countFreeRun(i) >= sizeOfTargetRun) return i;
     }
@@ -355,22 +331,6 @@ char getDir(const char *path, cs1550_directory_entry *d)
     printf("===============GET DIR END=====================\n");
 
     return 0;
-}
-
-
-// given a directory name, put a given file into that directory structure.
-void addFileToDir(const char *path, struct cs1550_file_directory newFile)
-{
-    char directory[MAX_FILENAME + 1] = {0};
-    char filename[MAX_FILENAME + 1] = {0};
-    char extension[MAX_EXTENSION] = {0};
-
-    sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension);
-
-    struct cs1550_directory_entry pop;
-    getDir(directory, &pop);
-
-    pop.files[pop.nFiles] = newFile;
 }
 
 
@@ -486,9 +446,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
  */
 static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-    //Since we're building with -Wall (all warnings reported) we need
-    //to "use" every parameter, so let's just cast them to void to
-    //satisfy the compiler
     (void) offset;
     (void) fi;
 
@@ -509,7 +466,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
 
 
     if (strcmp(path, "/") == 0)
-    {
+    { // If we're in the root, fill in the directories
         FILE *fp;
         fp = fopen(".directories", "r");
 
@@ -527,22 +484,17 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
         return 0;
     }
     else
-    {
+    { // Otherwise display the files in the current dir
         printf("HEREHE %s\n", path);
         cs1550_directory_entry mydir;
 
         if(getDir(directory, &mydir))
-        {
-            printf("Got DIR\n");
-            printf("DIR NAME = %s\n", mydir.dname);
-            printf("DIR NAME = %d\n", mydir.nFiles);
-
+        { // Go to our dir
             int i;
             for (i = 0; i < mydir.nFiles; i++)
-            {
+            { // And add all the files
                 filler(buf, mydir.files[i].fname, NULL, 0);
             }
-            printf("---~---\n");
         }
         else
         {
@@ -559,7 +511,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler, o
  */
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
-
     (void) mode;
 
     printf("==========MKDIR START==========\n");
@@ -580,6 +531,7 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     return 0;
 }
 
+
 /* 
  * Removes a directory.
  */
@@ -589,9 +541,9 @@ static int cs1550_rmdir(const char *path)
     return 0;
 }
 
+
 /* 
  * Does the actual creation of a file. Mode and dev can be ignored.
- *
  */
 static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
@@ -610,7 +562,6 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     printf("DIRECTORY: %s\n", directory);
     printf("FILENAME: %s\n", filename);
     printf("EXTENSION: %s\n", extension);
-
 
     // Give a file a single block to start with.
     int startBlock = moveFileToMemory(0, 1);
@@ -631,8 +582,7 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         while(fread(&searchDir, 1, sizeof(cs1550_directory_entry), fp))
         {
             if(!strcmp(searchDir.dname, directory))
-            {
-
+            { // Add a new file to the directory with the appropriate name, extension, size, and start block.
                 strcpy(searchDir.files[searchDir.nFiles].fname, filename);
                 strcpy(searchDir.files[searchDir.nFiles].fext, extension);
                 searchDir.files[searchDir.nFiles].fsize = 0;
@@ -678,8 +628,10 @@ static int cs1550_unlink(const char *path)
             int startBlock = dir.files[i].nStartBlock;
             int sizeInBlocks = getBlockSize(dir.files[i].fsize);
 
+            // Mark the bitmap as free for these blocks
             removeFileFromMemory(startBlock, sizeInBlocks);
 
+            // Write over this file entry in the directory withs 0s
             memset((void *)&dir.files[i], 0, sizeof(struct cs1550_file_directory));
             printf("===================================== UNLINK END =====================================\n");
             return 0;
@@ -807,16 +759,11 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
     int i;
     for(i = 0; i < dir.nFiles; i++)
-    {
-        printf("I made it into the loop\n");
+    { // Look through all the files in the directory
         if(!strcmp(dir.files[i].fname, filename))
-        {
-
-            printf("I've found a positive match.\n");
-
+        { // If you find a positive match
             if(getBlockSize(size + offset) > getBlockSize(dir.files[i].fsize))
             { // If it is time to grow the file...
-
                 printf("We're growing the file\n");
                 // Calculate the current size of the file.
                 int startBlock = dir.files[i].nStartBlock;
@@ -840,7 +787,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
                 fp = fopen(".directories", "r+");
 
-
+                // Record the change in file size and start block into the filesystem.
                 if(fp)
                 {
                     cs1550_directory_entry searchDir;
@@ -853,12 +800,8 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                             {
                                 if(!strcmp(searchDir.files[i].fname, filename))
                                 {
-                                    printf("OLD: start(%d), size(%d)\n", searchDir.files[i].nStartBlock, searchDir.files[i].fsize);
-
                                     searchDir.files[i].nStartBlock = newStartBlock;
                                     searchDir.files[i].fsize = size + offset;
-
-                                    printf("NEW: start(%d), size(%d)\n", searchDir.files[i].nStartBlock, searchDir.files[i].fsize);
 
                                     fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
                                     fwrite(&searchDir, 1, sizeof(cs1550_directory_entry), fp);
@@ -866,7 +809,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 
                                     printf("===================================== WRITE END =====================================\n");
                                     return size;
-
                                 }
                             }
                         }
@@ -899,7 +841,6 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
                     {
                         if(!strcmp(searchDir.dname, directory))
                         {
-
                             int i;
 
                             for(i = 0; i < searchDir.nFiles; i++)
