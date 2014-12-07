@@ -85,6 +85,7 @@ int countFreeRun(int);
 int nextFreeRunFit(int);
 int getBlockSize(size_t);
 char getDir(const char *, cs1550_directory_entry *);
+void format(struct cs1550_file_directory *, int, int);
 /* * * * * * * * * * * * * * *
 
         HELPER FUNCTIONS
@@ -350,6 +351,16 @@ int getBlockSize(size_t fsize)
 }
 
 
+// Will remove a specified file from the directory and then realign the files so that there are no gaps
+void format(struct cs1550_file_directory *a, int size, int indexToDelete)
+{
+    int i = 0;
+    for(i = indexToDelete; i < size - 1; i++)
+    {
+        a[i] = a[i+1];
+    }
+}
+
 /* * * * * * * * * * * * * * *
 
      FILESYSTEM FUNCTIONS
@@ -563,6 +574,7 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     printf("FILENAME: %s\n", filename);
     printf("EXTENSION: %s\n", extension);
 
+
     // Give a file a single block to start with.
     int startBlock = moveFileToMemory(0, 1);
 
@@ -582,7 +594,8 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         while(fread(&searchDir, 1, sizeof(cs1550_directory_entry), fp))
         {
             if(!strcmp(searchDir.dname, directory))
-            { // Add a new file to the directory with the appropriate name, extension, size, and start block.
+            {
+
                 strcpy(searchDir.files[searchDir.nFiles].fname, filename);
                 strcpy(searchDir.files[searchDir.nFiles].fext, extension);
                 searchDir.files[searchDir.nFiles].fsize = 0;
@@ -603,6 +616,7 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     printf("===================================== MKNOD END (FAIL) =====================================\n");
     return -1;
 }
+
 
 /*
  * Deletes a file
@@ -628,11 +642,29 @@ static int cs1550_unlink(const char *path)
             int startBlock = dir.files[i].nStartBlock;
             int sizeInBlocks = getBlockSize(dir.files[i].fsize);
 
-            // Mark the bitmap as free for these blocks
             removeFileFromMemory(startBlock, sizeInBlocks);
 
-            // Write over this file entry in the directory withs 0s
-            memset((void *)&dir.files[i], 0, sizeof(struct cs1550_file_directory));
+            format(dir.files, dir.nFiles, i);
+            dir.nFiles--;
+
+            FILE *fp;
+            fp = fopen(".directories", "r+");
+
+            if(fp)
+            {
+                cs1550_directory_entry searchDir;
+                while(fread(&searchDir, 1, sizeof(cs1550_directory_entry), fp))
+                {
+                    if(!strcmp(searchDir.dname, directory))
+                    {
+                        fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
+                        fwrite(&dir, 1, sizeof(cs1550_directory_entry), fp);
+                        fclose(fp);
+                        printf("===================================== MKNOD END =====================================\n");
+                        return 0;
+                    }
+                }
+            }
             printf("===================================== UNLINK END =====================================\n");
             return 0;
         }
@@ -640,6 +672,7 @@ static int cs1550_unlink(const char *path)
     printf("===================================== UNLINK END (FAIL) =====================================\n");
     return -1;
 }
+
 
 /* 
  * Read size bytes from file into buf starting from offset
@@ -711,6 +744,7 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
     printf("===================================== READ END (FAIL 4) =====================================\n");
     return -1;
 }
+
 
 /* 
  * Write size bytes from buf into file starting from offset
