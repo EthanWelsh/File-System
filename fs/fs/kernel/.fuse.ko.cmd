@@ -1,1 +1,0 @@
-cmd_/u/OSLab/jrmst106/newfuse/fuse-2.7.0/kernel/fuse.ko := ld -m elf_x86_64 -r -o /u/OSLab/jrmst106/newfuse/fuse-2.7.0/kernel/fuse.ko /u/OSLab/jrmst106/newfuse/fuse-2.7.0/kernel/fuse.o /u/OSLab/jrmst106/newfuse/fuse-2.7.0/kernel/fuse.mod.o
