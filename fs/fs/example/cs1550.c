@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #import <math.h>
-
 /* * * * * * * * * * * * * * *
 
            DEFINES
@@ -32,11 +31,6 @@
 #define    BLOCK_SIZE 512
 #define    SIZE_OF_BITMAP 3
 #define    NUM_OF_BLOCKS 10240
-
-
-
-
-
 /* * * * * * * * * * * * * * *
 
             STRUCTS
@@ -229,7 +223,6 @@ int countFreeRun(int blockNum)
         if(blockStatus(i) == 0) freeBlocksSoFar++;
         else return freeBlocksSoFar;
     }
-
     return freeBlocksSoFar;
 }
 
@@ -246,6 +239,7 @@ int nextFreeRunFit(int sizeOfTargetRun)
 
     return -1;
 }
+
 
 // Given a file, will move said file into memory and mark the bitmap appropriately. Returns startblock.
 int moveFileToMemory(void * data, int size)
@@ -278,7 +272,6 @@ int moveFileToMemory(void * data, int size)
     {
         printf("Writing data to .disk\n");
         fwrite(data, 1, size, fp);
-
     }
     fclose(fp);
 
@@ -323,7 +316,6 @@ char getDir(const char *path, cs1550_directory_entry *d)
                 printf("===============GET DIR END=====================\n");
                 return 1;
             }
-
         }
     }
 
@@ -401,7 +393,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
         printf("File Name: %s\n", filename);
         printf("Extension: %s\n", extension);
 
-
         if(strcmp(filename, "")) // If the filename isn't empty
         {
             printf("fIlE sTuFf\n");
@@ -449,6 +440,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     printf("==========GETATTR END==========\n");
     return res;
 }
+
 
 /* 
  * Called whenever the contents of a directory are desired. Could be from an 'ls'
@@ -563,7 +555,6 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 
     printf("===================================== MKNOD START =====================================\n");
 
-
     char directory[MAX_FILENAME + 1] = {0};
     char filename[MAX_FILENAME + 1] = {0};
     char extension[MAX_EXTENSION] = {0};
@@ -573,7 +564,6 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     printf("DIRECTORY: %s\n", directory);
     printf("FILENAME: %s\n", filename);
     printf("EXTENSION: %s\n", extension);
-
 
     // Give a file a single block to start with.
     int startBlock = moveFileToMemory(0, 1);
@@ -740,7 +730,6 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset, s
 
             fseek(fp, offsetInBytes + offset, SEEK_SET);
             int ret = fread(buf, 1, size, fp);
-
 
             printf("%d == %d\n", ret, size);
             printf("READ: %s\n", buf);
