@@ -665,7 +665,7 @@ static int cs1550_unlink(const char *path)
                         fseek(fp, -sizeof(cs1550_directory_entry), SEEK_CUR);
                         fwrite(&dir, 1, sizeof(cs1550_directory_entry), fp);
                         fclose(fp);
-                        printf("===================================== MKNOD END =====================================\n");
+                        printf("===================================== UNLINK END =====================================\n");
                         return 0;
                     }
                 }
